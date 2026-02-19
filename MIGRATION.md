@@ -18,7 +18,7 @@ Edit these files/directories as source:
 
 - `js9.js`
 - `js9worker.js`
-- `js9Helper.js`
+- `node/helper/js9Helper.js`
 - `node/cli/js9Msg.js`
 - `js9PostMessage.js`
 - `node/cli/js9Regions.ts`
@@ -40,6 +40,7 @@ Treat these as generated artifacts (do not edit directly):
 - `js9Regions.js` (compatibility wrapper)
 - `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
 - `js9Msg.js` (compatibility wrapper)
+- `js9Helper.js` (compatibility wrapper)
 
 Notes:
 
