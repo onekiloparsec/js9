@@ -20,7 +20,7 @@ Edit these files/directories as source:
 - `js9worker.js`
 - `node/helper/js9Helper.js`
 - `node/cli/js9Msg.js`
-- `js9PostMessage.js`
+- `node/browser/js9PostMessage.js`
 - `node/cli/js9Regions.ts`
 - `plugins/core/*.js`
 - `plugins/archive/archive.js`
@@ -41,6 +41,7 @@ Treat these as generated artifacts (do not edit directly):
 - `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
 - `js9Msg.js` (compatibility wrapper)
 - `js9Helper.js` (compatibility wrapper)
+- `js9PostMessage.js` (compatibility symlink to `node/browser/js9PostMessage.js`)
 
 Notes:
 
