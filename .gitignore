@@ -31,3 +31,4 @@ a.out.dSYM
 /old
 /tmp
 /talks
+node_modules/
