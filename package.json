@@ -5,7 +5,9 @@
   "main": "js9.js",
   "scripts": {
     "start": "build/quicktest",
-    "test": "build/quicktest build/i800400.fits.gz"
+    "test": "build/quicktest build/i800400.fits.gz",
+    "ts:migration:check": "tsc -p tsconfig.migration.json",
+    "ts:migration:build": "tsc -p tsconfig.js9Regions.build.json"
   },
   "repository": {
     "type": "git",
@@ -38,5 +40,18 @@
     "socket.io": "^4.5.4",
     "socket.io-client": "^4.5.4",
     "uuid": "^9.0.0"
-  }
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^25.3.0",
+    "typescript": "^5.9.3"
+  },
+  "bundleDependencies": [
+    "minimist",
+    "open",
+    "ps-list",
+    "rimraf",
+    "socket.io",
+    "uuid"
+  ]
 }
