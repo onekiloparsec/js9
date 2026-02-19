@@ -10,14 +10,15 @@ Companion structure tracker: `docs/migration/STRUCTURE.md`
 - Keep the existing build chain (`Makefile` + concat/minify scripts) unchanged.
 - Remove Electron packaging entrypoints from the active build/install path.
 - Do not flip global module mode (`"type": "module"`) yet.
-- Start with one isolated pilot target: `node/cli/js9Regions.ts`.
+- Start with isolated pilot targets: `node/cli/js9Regions.ts` and `node/browser/js9worker.ts`.
 
 ## Source Of Truth Map
 
 Edit these files/directories as source:
 
 - `node/browser/js9.js`
-- `node/browser/js9worker.js`
+- `node/browser/js9worker.ts`
+- `node/browser/core/js9CoreBasicUtils.js`
 - `node/helper/js9Helper.js`
 - `node/cli/js9Msg.js`
 - `node/browser/js9PostMessage.js`
@@ -41,6 +42,7 @@ Treat these as generated artifacts (do not edit directly):
 - `js9worker.js` (compatibility symlink to `node/browser/js9worker.js`)
 - `js9Regions.js` (compatibility wrapper)
 - `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
+- `node/browser/js9worker.js` (generated from `node/browser/js9worker.ts`)
 - `js9Msg.js` (compatibility wrapper)
 - `js9Helper.js` (compatibility wrapper)
 - `js9PostMessage.js` (compatibility symlink to `node/browser/js9PostMessage.js`)
@@ -56,7 +58,7 @@ Step 1 adds a check-only TypeScript config:
 
 - File: `tsconfig.migration.json`
 - Uses `noEmit`
-- Includes only `node/cli/js9Regions.ts`
+- Includes `node/cli/js9Regions.ts` and `node/browser/js9worker.ts`
 
 Run:
 
@@ -69,12 +71,10 @@ If `tsc` is not installed locally yet, install TypeScript in a later step before
 ## Exit Criteria For Step 1
 
 - Boundaries between source and generated files are documented.
-- A single pilot file (`node/cli/js9Regions.ts`) is selected.
+- Pilot files (`node/cli/js9Regions.ts`, `node/browser/js9worker.ts`) are selected.
 - Type-check baseline exists with zero runtime impact.
 
-## Planned Step 2 (next incremental move)
+## Planned Next Increment
 
-- Compile `node/cli/js9Regions.ts` to `node/cli/js9Regions.js` with no behavior change.
-- Keep `js9Regions.js` as a temporary wrapper to preserve script compatibility.
-- Keep output compatible with current Node usage (CommonJS during transition).
-- Add npm script(s) for repeatable type check/build for this pilot only.
+- Expand browser-core carve-outs in `node/browser/core/` with pure helpers only.
+- Start TypeScript pilot for `node/cli/js9Msg.js`.

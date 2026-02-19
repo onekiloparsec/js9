@@ -10,7 +10,7 @@
  *
  */
 
-/*global JS9Prefs, JS9Inline, $, jQuery, fabric, io, sprintf, Astroem, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
+/*global JS9Prefs, JS9Inline, JS9CoreBasicUtils, $, jQuery, fabric, io, sprintf, Astroem, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
 
 "use strict";
 
@@ -22741,37 +22741,42 @@ JS9.invertMatrix3 = function(xin){
     return xout;
 };
 
-// is this a string representation of a number?
-// https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
-// NB: don't use Number.XXX routines, they don't work .. "2016-5" returns true
-JS9.isNumber = function(s){
-    return !isNaN(parseFloat(s)) && isFinite(s);
-};
+// install extracted basic utils, or fall back to local definitions
+if( typeof JS9CoreBasicUtils === "function" ){
+    JS9CoreBasicUtils(JS9);
+} else {
+    // is this a string representation of a number?
+    // https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
+    // NB: don't use Number.XXX routines, they don't work .. "2016-5" returns true
+    JS9.isNumber = function(s){
+	return !isNaN(parseFloat(s)) && isFinite(s);
+    };
 
-// check if a variable is neither undefined nor null
-JS9.notNull = function(s){
-    return s !== undefined && s !== null;
-};
+    // check if a variable is neither undefined nor null
+    JS9.notNull = function(s){
+	return s !== undefined && s !== null;
+    };
 
-// check if a variable is either undefined or null
-JS9.isNull = function(s){
-    return s === undefined || s === null;
-};
+    // check if a variable is either undefined or null
+    JS9.isNull = function(s){
+	return s === undefined || s === null;
+    };
 
-// use a default if a variable is either undefined or null
-JS9.defNull = function(s, def){
-    return JS9.notNull(s) ? s : def;
-};
+    // use a default if a variable is either undefined or null
+    JS9.defNull = function(s, def){
+	return JS9.notNull(s) ? s : def;
+    };
 
-// check if a wcs system is a world coordinate system (fk5, etc)
-JS9.isWCSSys = function(s){
-    return s !== "image" && s !== "physical";
-};
+    // check if a wcs system is a world coordinate system (fk5, etc)
+    JS9.isWCSSys = function(s){
+	return s !== "image" && s !== "physical";
+    };
 
-// check if a wcs system is not a world coordinate system (fk5, etc)
-JS9.notWCS = function(s){
-    return s === "image" || s === "physical";
-};
+    // check if a wcs system is not a world coordinate system (fk5, etc)
+    JS9.notWCS = function(s){
+	return s === "image" || s === "physical";
+    };
+}
 
 // was last parsed string in units of hours/min/sec (using specified wcssys)?
 JS9.isHMS = function(wcssys, dtype){
