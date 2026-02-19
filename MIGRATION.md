@@ -2,12 +2,15 @@
 
 This document defines the first migration boundary for moving JS9 to TypeScript and ESM in low-risk increments.
 
+Companion structure tracker: `docs/migration/STRUCTURE.md`
+
 ## Scope of Step 1
 
 - Keep runtime behavior unchanged.
 - Keep the existing build chain (`Makefile` + concat/minify scripts) unchanged.
+- Remove Electron packaging entrypoints from the active build/install path.
 - Do not flip global module mode (`"type": "module"`) yet.
-- Start with one isolated pilot target: `js9Regions.ts`.
+- Start with one isolated pilot target: `node/cli/js9Regions.ts`.
 
 ## Source Of Truth Map
 
@@ -18,10 +21,7 @@ Edit these files/directories as source:
 - `js9Helper.js`
 - `js9Msg.js`
 - `js9PostMessage.js`
-- `js9Regions.ts`
-- `js9Electron.js`
-- `js9ElectronPreload.js`
-- `js9ElectronMainMenu.js`
+- `node/cli/js9Regions.ts`
 - `plugins/core/*.js`
 - `plugins/archive/archive.js`
 - `plugins/fitsy/*.js`
@@ -37,7 +37,8 @@ Treat these as generated artifacts (do not edit directly):
 - `js9plugins.min.js` (minified plugin bundle)
 - `js9-allinone.js` and `js9-allinone.css` (assembled by `build/mkallinone`)
 - `js/regSelect.js` (generated from `src/regSelect.jison`)
-- `js9Regions.js` (generated from `js9Regions.ts` in migration stage)
+- `js9Regions.js` (compatibility wrapper)
+- `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
 
 Notes:
 
@@ -50,7 +51,7 @@ Step 1 adds a check-only TypeScript config:
 
 - File: `tsconfig.migration.json`
 - Uses `noEmit`
-- Includes only `js9Regions.ts`
+- Includes only `node/cli/js9Regions.ts`
 
 Run:
 
@@ -63,11 +64,12 @@ If `tsc` is not installed locally yet, install TypeScript in a later step before
 ## Exit Criteria For Step 1
 
 - Boundaries between source and generated files are documented.
-- A single pilot file (`js9Regions.ts`) is selected.
+- A single pilot file (`node/cli/js9Regions.ts`) is selected.
 - Type-check baseline exists with zero runtime impact.
 
 ## Planned Step 2 (next incremental move)
 
-- Compile `js9Regions.ts` to `js9Regions.js` with no behavior change.
+- Compile `node/cli/js9Regions.ts` to `node/cli/js9Regions.js` with no behavior change.
+- Keep `js9Regions.js` as a temporary wrapper to preserve script compatibility.
 - Keep output compatible with current Node usage (CommonJS during transition).
 - Add npm script(s) for repeatable type check/build for this pilot only.

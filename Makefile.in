@@ -95,7 +95,7 @@ CGIXPATH =   	@CGIXPATH@
 # this is for SAO install only ... I think!
 SAODIR =	@SAODIR@
 
-WEBDIRS	=	plugins params js css font images
+WEBDIRS	=	plugins params js css font images node
 
 BEDIRS =	node_modules analysis-plugins analysis-wrappers
 
@@ -105,7 +105,6 @@ WEBFILES =	js9.js js9.min.js js9worker.js \
 		js9support.js js9support.min.js js9support.css js9plugins.js \
 		js9support.txt js9.css $(ALLIN1).js $(ALLIN1).css \
 		js9Msg.js js9PostMessage.js js9Helper.js js9Regions.js \
-		js9Electron.js js9ElectronPreload.js js9ElectronMainMenu.js \
 		astroem.js astroemw.js astroemw.wasm \
 		favicon.ico js9.html
 
@@ -162,7 +161,6 @@ PLCSSFILES =	plugins/core/blend.css plugins/core/blink.css \
 JSFILES =	 js/winmod.js js/jquery.min.js js/jquery-ui.min.js js/jquery.contextMenu.min.js js/jquery.flot.min.js js/jquery.flot.errorbars.min.js js/jquery.flot.navigate.min.js js/jquery.flot.resize.min.js js/jquery.flot.selection.min.js js/flot-zoom.min.js js/sprintf.min.js js/dhtmlwindow.min.js js/dhtmlwindow_blurb.js js/fabric.min.js js/pako_inflate.min.js js/FileSaver.min.js js/canvas-toBlob.js js/tabcontent.js js/arrive.min.js js/jquery.doubletap.min.js js/jquery.flot.axislabels.js js/spin.js js/ElementQueries.js js/ResizeSensor.js js/gaussblur.js js/imagefilters.js js/jquery.ui.touch-punch.js js/js9inline.js js/spectrum.min.js js/tinycolor.min.js js/jquery.mark.es6.min.js js/jquery.caret.min.js js/regSelect.js
 
 JSLINT =	js9.js js9worker.js js9Helper.js js9Msg.js \
-		js9Electron.js js9ElectronPreload.js js9ElectronMainMenu.js \
 		js9PostMessage.js js9Regions.js astroem/post.js
 
 PLUGINFILES =	plugins/archive/archive.js \
@@ -619,9 +617,6 @@ astroem:	FORCE
 errcheck:	FORCE
 		@(egrep '[^x]error|warning|ld:|collect2:|make:' foo | \
 		  egrep -v "^lex.*but not used"; true)
-
-electron-cache:	FORCE
-		@(rm -rf "$$HOME/Library/Application Support/Electron/Cache")
 
 valgrind:	FORCE
 		@(echo "see: https://developer.mozilla.org/en-US/docs/Mozilla/Testing/Valgrind"; echo "for Macs: valgrind --dsymutil=yes --show-mismatched-frees=no --leak-check=yes --track-origins=yes [prog] [args]";)
