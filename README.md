@@ -13,6 +13,13 @@ JS9: astronomical image display everywhere
 
 ![JS9](images/js9Readme.png)
 
+Attribution
+-----------
+
+This project is based on the original JS9 work by Eric Mandel and Alexey Vikhlinin, developed at the Center for Astrophysics | Harvard & Smithsonian.
+
+For this fork/migration, attribution is centralized here in `README.md` instead of being repeated in per-file headers.
+
 What does it do?
 ----------------
 
@@ -63,10 +70,19 @@ Load a local page into your browser:
 (NB: Chrome needs to run with the --allow-file-access-from-files switch to use
 the file URI.)
 
-For Desktop use, install [Electron.js](https://www.electronjs.org/)
-and use the *js9* script to start the Desktop app and load an image:
+For browser-first development and packaging with Vite:
 
-    js9 -a ~/data/m13.fits
+    npm install
+    npm run dev
+
+Then open:
+
+    http://localhost:5173/js9.html
+
+Build a packaged static output:
+
+    npm run build
+    npm run preview
 
 For more advanced support (web-based support, support for handling large files),
 build the JS9 helper and install JS9 in a web directory:
@@ -96,8 +112,7 @@ What about scripting?
 
 The *js9* script allows you to control a JS9 web page from the Linux
 command line using the JS9 Public API (scripting requires installation of
-JS9 and either [node.js](https://nodejs.org/) or
-[Electron.js](https://www.electronjs.org/)):
+JS9 and [node.js](https://nodejs.org/)):
 
     js9 Load chandra.fits '{"scale":"log","colormap":"red","contrast":5.78,"bias":0.15}'
     js9 Load spitzer.fits '{"scale":"log","colormap":"blue","contrast":6.3,"bias":0.54}'

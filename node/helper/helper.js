@@ -1,14 +1,6 @@
 /*
- *
- * js9Helper: Node-based back-end server for JS9 (September 4, 2012)
- *
- * Principals: Eric Mandel
- * Organization: Center for Astrophysics | Harvard & Smithsonian, Cambridge MA
- * Contact: emandel@cfa.harvard.edu
- *
- * Copyright (c) 2012 - 2024 Smithsonian Astrophysical Observatory
- *
- *
+ * JS9 helper server for browser/CLI integration.
+ * Attribution is centralized in README.md.
  */
 
 /* global */

@@ -4,8 +4,8 @@
     "noEmitOnError": true
   },
   "include": [
-    "node/cli/js9Regions.ts",
-    "node/browser/js9worker.ts"
+    "node/cli/regions.ts",
+    "node/browser/worker.ts"
   ],
   "exclude": [
     "node_modules"

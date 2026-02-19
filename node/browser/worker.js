@@ -1,14 +1,4 @@
-/*
- *
- * js9Worker.js: web worker support (March 23, 2017)
- *
- * Principals: Eric Mandel
- * Organization: Harvard Smithsonian Center for Astrophysics, Cambridge MA
- * Contact: saord@cfa.harvard.edu
- *
- * Copyright (c) 2017 - 2022 Smithsonian Astrophysical Observatory
- *
- */
+/* JS9 browser web worker. Attribution is centralized in README.md. */
 /*global importScripts, io */
 "use strict";
 const workerSelf = self;

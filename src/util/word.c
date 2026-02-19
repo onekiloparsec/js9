@@ -1,6 +1,4 @@
-/*
- *	Copyright (c) 1999-2003 Smithsonian Astrophysical Observatory
- */
+/* Project source file. Attribution is centralized in README.md. */
 
 /*
  *    word.c -- token parser, pattern matcher, macro expander, 

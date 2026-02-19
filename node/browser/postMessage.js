@@ -1,17 +1,6 @@
 /*
- *
- * JS9 Post Message module (September 30, 2015)
- *
- * convenience routines to send a postMessage to JS9 inside an iFrame
- *
- * NB: This is an experimental module. Proceed with caution!
- *
- * Principals: Eric Mandel
- * Organization: Center for Astrophysics | Harvard & Smithsonian, Cambridge MA
- * Contact: emandel@cfa.harvard.edu
- *
- * Copyright (c) 2015 - 2022 Smithsonian Astrophysical Observatory
- *
+ * JS9 browser postMessage helper.
+ * Attribution is centralized in README.md.
  */
 
 /*jslint plusplus: true, vars: true, white: true, continue: true, unparam: true, regexp: true, browser: true, devel: true, nomen: true */

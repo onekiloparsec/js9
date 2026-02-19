@@ -7,7 +7,11 @@
     "start": "build/quicktest",
     "test": "build/quicktest build/i800400.fits.gz",
     "ts:migration:check": "tsc -p tsconfig.migration.json",
-    "ts:migration:build": "tsc -p tsconfig.js9Regions.build.json"
+    "ts:migration:build": "tsc -p tsconfig.pilots.build.json",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:vitest": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -44,7 +48,10 @@
   "devDependencies": {
     "@types/minimist": "^1.2.5",
     "@types/node": "^25.3.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-static-copy": "^3.2.0",
+    "vitest": "^4.0.18"
   },
   "bundleDependencies": [
     "minimist",

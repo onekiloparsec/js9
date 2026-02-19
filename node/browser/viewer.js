@@ -1,16 +1,6 @@
-/*
- *
- * JS9: astronomical image display everywhere (December 10, 2012)
- *
- * Principals: Eric Mandel, Alexey Vikhlinin
- * Organization: Center for Astrophysics | Harvard & Smithsonian, Cambridge MA
- * Contact: emandel@cfa.harvard.edu
- *
- * Copyright (c) 2012 - 2022 Smithsonian Astrophysical Observatory
- *
- */
+/* JS9 browser viewer core. Attribution is centralized in README.md. */
 
-/*global JS9Prefs, JS9Inline, JS9CoreBasicUtils, $, jQuery, fabric, io, sprintf, Astroem, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
+/*global JS9Prefs, JS9Inline, CoreBasicUtils, $, jQuery, fabric, io, sprintf, Astroem, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
 
 "use strict";
 
@@ -22742,8 +22732,8 @@ JS9.invertMatrix3 = function(xin){
 };
 
 // install extracted basic utils, or fall back to local definitions
-if( typeof JS9CoreBasicUtils === "function" ){
-    JS9CoreBasicUtils(JS9);
+if( typeof CoreBasicUtils === "function" ){
+    CoreBasicUtils(JS9);
 } else {
     // is this a string representation of a number?
     // https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number

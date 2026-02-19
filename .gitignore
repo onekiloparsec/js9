@@ -32,3 +32,5 @@ a.out.dSYM
 /tmp
 /talks
 node_modules/
+dist-vite/
+coverage/

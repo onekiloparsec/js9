@@ -1,13 +1,6 @@
 /*
- *
- * js9Regions: Node-based js9 to ds9 region converter
- *
- * Principals: Eric Mandel
- * Organization: Center for Astrophysics | Harvard & Smithsonian, Cambridge MA
- * Contact: emandel@cfa.harvard.edu
- *
- * Copyright (c) 2017 - 2022 Smithsonian Astrophysical Observatory
- *
+ * JS9 CLI regions converter (JS9 <-> DS9 text regions).
+ * Attribution is centralized in README.md.
  */
 
 /* global */

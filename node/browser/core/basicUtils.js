@@ -1,15 +1,9 @@
-/*
- *
- * js9CoreBasicUtils.js: install basic JS9 utility helpers
- *
- * Extracted from js9.js during migration to modular browser sources.
- *
- */
+/* JS9 browser core basic utilities. Attribution is centralized in README.md. */
 
 "use strict";
 
 // install helpers on a JS9 namespace object
-var JS9CoreBasicUtils = function(JS9){
+var CoreBasicUtils = function(JS9){
     // is this a string representation of a number?
     // https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
     // NB: don't use Number.XXX routines, they don't work .. "2016-5" returns true

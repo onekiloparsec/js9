@@ -1,7 +1,7 @@
 /*
  * Compatibility wrapper during TypeScript migration.
- * Source of truth: node/cli/js9Regions.ts
+ * Source of truth: node/cli/regions.ts
  */
 "use strict";
 
-require("./node/cli/js9Regions.js");
+require("./node/cli/regions.js");

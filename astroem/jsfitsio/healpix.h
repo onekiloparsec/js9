@@ -1,6 +1,4 @@
-/*
- *	Copyright (c) 2016 Smithsonian Astrophysical Observatory
- */
+/* Project source file. Attribution is centralized in README.md. */
 
 /*
  *

@@ -1,7 +1,7 @@
 /*
  * Compatibility wrapper during structure migration.
- * Source of truth: node/cli/js9Msg.js
+ * Source of truth: node/cli/msg.js
  */
 "use strict";
 
-require("./node/cli/js9Msg.js");
+require("./node/cli/msg.js");

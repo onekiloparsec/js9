@@ -7,22 +7,22 @@ Companion structure tracker: `docs/migration/STRUCTURE.md`
 ## Scope of Step 1
 
 - Keep runtime behavior unchanged.
-- Keep the existing build chain (`Makefile` + concat/minify scripts) unchanged.
+- Keep the existing build chain (`Makefile` + concat/minify scripts) intact while introducing a parallel Vite packaging path.
 - Remove Electron packaging entrypoints from the active build/install path.
 - Do not flip global module mode (`"type": "module"`) yet.
-- Start with isolated pilot targets: `node/cli/js9Regions.ts` and `node/browser/js9worker.ts`.
+- Start with isolated pilot targets: `node/cli/regions.ts` and `node/browser/worker.ts`.
 
 ## Source Of Truth Map
 
 Edit these files/directories as source:
 
-- `node/browser/js9.js`
-- `node/browser/js9worker.ts`
-- `node/browser/core/js9CoreBasicUtils.js`
-- `node/helper/js9Helper.js`
-- `node/cli/js9Msg.js`
-- `node/browser/js9PostMessage.js`
-- `node/cli/js9Regions.ts`
+- `node/browser/viewer.js`
+- `node/browser/worker.ts`
+- `node/browser/core/basicUtils.js`
+- `node/helper/helper.js`
+- `node/cli/msg.js`
+- `node/browser/postMessage.js`
+- `node/cli/regions.ts`
 - `plugins/core/*.js`
 - `plugins/archive/archive.js`
 - `plugins/fitsy/*.js`
@@ -32,20 +32,20 @@ Edit these files/directories as source:
 
 Treat these as generated artifacts (do not edit directly):
 
-- `js9.min.js` (minified from `js9.js`, whose source is `node/browser/js9.js`)
+- `js9.min.js` (minified from `js9.js`, whose source is `node/browser/viewer.js`)
 - `js9support.js` and `js9support.min.js` (concatenated from `JSFILES` in `Makefile.in`)
 - `js9plugins.js` (concatenated from `PLUGINFILES` in `Makefile.in`)
 - `js9plugins.min.js` (minified plugin bundle)
 - `js9-allinone.js` and `js9-allinone.css` (assembled by `build/mkallinone`)
 - `js/regSelect.js` (generated from `src/regSelect.jison`)
-- `js9.js` (compatibility symlink to `node/browser/js9.js`)
-- `js9worker.js` (compatibility symlink to `node/browser/js9worker.js`)
+- `js9.js` (compatibility symlink to `node/browser/viewer.js`)
+- `js9worker.js` (compatibility symlink to `node/browser/worker.js`)
 - `js9Regions.js` (compatibility wrapper)
-- `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
-- `node/browser/js9worker.js` (generated from `node/browser/js9worker.ts`)
+- `node/cli/regions.js` (generated from `node/cli/regions.ts`)
+- `node/browser/worker.js` (generated from `node/browser/worker.ts`)
 - `js9Msg.js` (compatibility wrapper)
 - `js9Helper.js` (compatibility wrapper)
-- `js9PostMessage.js` (compatibility symlink to `node/browser/js9PostMessage.js`)
+- `js9PostMessage.js` (compatibility symlink to `node/browser/postMessage.js`)
 
 Notes:
 
@@ -58,7 +58,7 @@ Step 1 adds a check-only TypeScript config:
 
 - File: `tsconfig.migration.json`
 - Uses `noEmit`
-- Includes `node/cli/js9Regions.ts` and `node/browser/js9worker.ts`
+- Includes `node/cli/regions.ts` and `node/browser/worker.ts`
 
 Run:
 
@@ -71,10 +71,11 @@ If `tsc` is not installed locally yet, install TypeScript in a later step before
 ## Exit Criteria For Step 1
 
 - Boundaries between source and generated files are documented.
-- Pilot files (`node/cli/js9Regions.ts`, `node/browser/js9worker.ts`) are selected.
+- Pilot files (`node/cli/regions.ts`, `node/browser/worker.ts`) are selected.
 - Type-check baseline exists with zero runtime impact.
 
 ## Planned Next Increment
 
 - Expand browser-core carve-outs in `node/browser/core/` with pure helpers only.
-- Start TypeScript pilot for `node/cli/js9Msg.js`.
+- Start TypeScript pilot for `node/cli/msg.js`.
+- Add first Vitest browser/core tests once Vite packaging smoke tests are stable.

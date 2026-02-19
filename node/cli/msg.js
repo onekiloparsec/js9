@@ -1,15 +1,6 @@
 /*
- *
- * js9Msg.js: send messages to js9 via Node-based server (March 20, 2013)
- *
- * requires: socket.io
- *
- * Principals: Eric Mandel
- * Organization: Center for Astrophysics | Harvard & Smithsonian, Cambridge MA
- * Contact: emandel@cfa.harvard.edu
- *
- * Copyright (c) 2013 - 2022 Smithsonian Astrophysical Observatory
- *
+ * JS9 CLI message client.
+ * Attribution is centralized in README.md.
  */
 
 /* global */

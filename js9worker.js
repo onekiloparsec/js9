@@ -1,1 +1,1 @@
-node/browser/js9worker.js
+node/browser/worker.js

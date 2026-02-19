@@ -1,6 +1,4 @@
-/*
- *	Copyright (c) 2012-2020 Smithsonian Astrophysical Observatory
- */
+/* Project source file. Attribution is centralized in README.md. */
 
 #include "js9helper.h"
 
