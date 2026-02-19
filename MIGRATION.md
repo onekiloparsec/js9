@@ -16,8 +16,8 @@ Companion structure tracker: `docs/migration/STRUCTURE.md`
 
 Edit these files/directories as source:
 
-- `js9.js`
-- `js9worker.js`
+- `node/browser/js9.js`
+- `node/browser/js9worker.js`
 - `node/helper/js9Helper.js`
 - `node/cli/js9Msg.js`
 - `node/browser/js9PostMessage.js`
@@ -31,12 +31,14 @@ Edit these files/directories as source:
 
 Treat these as generated artifacts (do not edit directly):
 
-- `js9.min.js` (minified from `js9.js`)
+- `js9.min.js` (minified from `js9.js`, whose source is `node/browser/js9.js`)
 - `js9support.js` and `js9support.min.js` (concatenated from `JSFILES` in `Makefile.in`)
 - `js9plugins.js` (concatenated from `PLUGINFILES` in `Makefile.in`)
 - `js9plugins.min.js` (minified plugin bundle)
 - `js9-allinone.js` and `js9-allinone.css` (assembled by `build/mkallinone`)
 - `js/regSelect.js` (generated from `src/regSelect.jison`)
+- `js9.js` (compatibility symlink to `node/browser/js9.js`)
+- `js9worker.js` (compatibility symlink to `node/browser/js9worker.js`)
 - `js9Regions.js` (compatibility wrapper)
 - `node/cli/js9Regions.js` (generated from `node/cli/js9Regions.ts`)
 - `js9Msg.js` (compatibility wrapper)
