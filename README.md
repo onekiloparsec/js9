@@ -84,6 +84,37 @@ Build a packaged static output:
     npm run build
     npm run preview
 
+## FITS/XISF Extraction Boundary (`fixi-js`)
+
+This fork now supports an extracted FITS adapter layer in a sibling repository:
+
+    ../fixi-js
+
+JS9 prefers the `Fixi` adapter for FITS handling from the direct package
+dependency path:
+
+- `node_modules/@onekiloparsec/fixi-js/dist/fixi.js`
+- `node_modules/@onekiloparsec/fixi-js/dist/fixi_core.wasm`
+
+JS9 now uses a fixi-first FITS runtime path:
+
+- `fixi` Rust/WASM initializes FITS support directly in JS runtime
+- legacy `cfitsio` runtime paths are not used by default startup
+
+Default behavior with `Fixi` enabled:
+
+- `JS9.globalOpts.fitsCompliance = "strict"` (enforce core FITS HDU constraints)
+- set `fitsCompliance` to `"compat"` for legacy-permissive behavior
+
+Review notes for compliance-related behavior changes:
+
+- `docs/fixi-fits-compliance.md`
+- `docs/fits-adapter-interface.md`
+
+JS9 also references `fixi-js` as a local dev dependency:
+
+    "@onekiloparsec/fixi-js": "file:../fixi-js"
+
 For more advanced support (web-based support, support for handling large files),
 build the JS9 helper and install JS9 in a web directory:
 

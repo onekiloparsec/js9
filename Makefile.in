@@ -99,13 +99,12 @@ WEBDIRS	=	plugins params js css font images node
 
 BEDIRS =	node_modules analysis-plugins analysis-wrappers
 
-OTHERDIRS =	astroem src scripts build demos tests sao
+OTHERDIRS =	src scripts build demos tests sao
 
 WEBFILES =	js9.js js9.min.js js9worker.js \
 		js9support.js js9support.min.js js9support.css js9plugins.js \
 		js9support.txt js9.css $(ALLIN1).js $(ALLIN1).css \
 		js9Msg.js js9PostMessage.js js9Helper.js js9Regions.js \
-		astroem.js astroemw.js astroemw.wasm \
 		favicon.ico js9.html
 
 WEBHELP	=	help
@@ -129,12 +128,11 @@ RMFILES =	analysis-plugins/imageSection.json \
 		js9_center.html js9_center_top.html js9cookie.html \
 		js9debug.html js9memleak.html js9iframe.html \
 		js9usermenus.js js9usermenus.css js9debugextras \
-		js9Test.html js9Test.js js9Tests fitsy.js fitsy.min.js
+		js9Test.html js9Test.js js9Tests
 
 # sao: files that we gzip to make transfer faster
 GZFILES =	js9.js js9.min.js js9support.js js9support.min.js \
-		js9plugins.js js9-allinone.js \
-		astroem.js astroemw.js astroemw.wasm
+		js9plugins.js js9-allinone.js
 
 SAOWEBFILES =	sao/index.html
 
@@ -163,10 +161,9 @@ JSFILES =	 js/winmod.js js/jquery.min.js js/jquery-ui.min.js js/jquery.contextMe
 JSLINT =	node/browser/viewer.js js9.js node/browser/worker.js js9worker.js \
 		node/browser/core/basicUtils.js \
 		node/helper/helper.js js9Helper.js node/cli/msg.js js9Msg.js \
-		node/browser/postMessage.js js9PostMessage.js js9Regions.js astroem/post.js
+		node/browser/postMessage.js js9PostMessage.js js9Regions.js
 
 PLUGINFILES =	plugins/archive/archive.js \
-		plugins/fitsy/binning.js \
 		plugins/core/blend.js \
 		plugins/core/blink.js \
 		plugins/core/cmaps.js \
@@ -300,7 +297,7 @@ eslint:		FORCE
 		done)
 
 eslint2:	FORCE
-		@(for file in `ls plugins/core/*.js plugins/fitsy/binning.js`; do      \
+		@(for file in `ls plugins/core/*.js`; do      \
 		      echo $$file;               \
 		      eslint $$file;             \
 		done)
@@ -594,8 +591,7 @@ clean:		FORCE
 			autom4te.cache a.out.dSYM 			\
 			*/*~ */*.bak plugins/*/*~ demos/debug*.html; 	\
 		        $(MAKE) scriptclean; 				\
-			cd src && $(MAKE) clean && cd ..; 		\
-			cd astroem && $(MAKE) clean && cd ..)
+			cd src && $(MAKE) clean && cd ..)
 
 scriptclean:	FORCE
 		@($(CP) build/js9.in js9 && chmod +x js9)
@@ -612,9 +608,6 @@ Makefile:	Makefile.in
 		@(if [ -f config.status ] ; then 			\
 			$(SHELL) config.status;      			\
 		fi)
-
-astroem:	FORCE
-		@(make clean; cd astroem && make && make install && make clean)
 
 errcheck:	FORCE
 		@(egrep '[^x]error|warning|ld:|collect2:|make:' foo | \

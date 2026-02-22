@@ -1,6 +1,6 @@
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
 
-/*global JS9Prefs, JS9Inline, CoreBasicUtils, $, jQuery, fabric, io, sprintf, Astroem, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
+/*global JS9Prefs, JS9Inline, CoreBasicUtils, $, jQuery, fabric, io, sprintf, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
 
 "use strict";
 
@@ -163,6 +163,10 @@ JS9.globalOpts = {
     extlist: "EVENTS STDEVT",	// list of binary table extensions
     imopts: "IMOPTS",           // basename of FITS param containing json opts
     imcmap: "IMCMAP",           // basename of FITS param containing cmaps
+    fixiURL: "node_modules/@onekiloparsec/fixi-js/dist/fixi.js", // extracted FITS/XISF adapter runtime
+    fixiWasmURL: "node_modules/@onekiloparsec/fixi-js/dist/fixi_core.wasm", // Rust/WASM FITS core
+    fitsAdapter: "fixi",        // FITS backend id to activate (e.g. fixi or registered custom adapter)
+    fitsCompliance: "strict",   // fixi compliance mode: strict|compat
     table: {xdim: 4096, ydim: 4096, bin: 1, bitpix: 32},// image section size to extract from table
     image: {xdim: 4096, ydim: 4096, bin: 1},// image section size (unlimited=0)
     binMode: "s",               // "s" (sum) or "a" (avg) pixels when binning
@@ -313,7 +317,7 @@ JS9.globalOpts = {
 	       galactic:"degrees", ecliptic:"degrees", linear:"degrees",
 	       physical:"pixels", image:"pixels"}, // def units for wcs sys
     wcsSetUpdatesDef: true,          // does setWCSUnits() update the default?
-    wcsHlength: 256000,		     // hlength passed to astroem wcsninit()
+    wcsHlength: 256000,		     // hlength passed to adapter initwcs()
     regTemplates: ".reg",	     // templates for local region file input
     sessionTemplates: ".ses,.js9ses",// templates for local session file input
     colormapTemplates: ".cmap",      // templates for local colormap file input
@@ -1625,7 +1629,7 @@ JS9.Image.prototype.mkRawDataFromHDU = function(obj, opts){
 	}
     }
     // if section information is available, modify the WCS keywords
-    // e.g., image sections from astroem/getFITSImage()
+    // e.g., image sections returned by adapter getFITSImage()
     // this code should match the algorithm in jsfitsio.c/updateWCS()
     if( hdu.imtab === "image"  &&
 	(hdu.x1 !== undefined  && hdu.x1 !== 1)  ||
@@ -5034,7 +5038,7 @@ JS9.Image.prototype.setWCSSys = function(wcssys, updatedef){
 
 // init wcs
 JS9.Image.prototype.initWCS = function(header){
-    let alt, key, varr, s, bufsize, buf;
+    let alt, key, varr, s, bufsize, buf, wcsInitMode;
     const hlen = JS9.globalOpts.wcsHlength;
     const awcs = /(WCSNAME|WCSAXES|CRVAL[0-9]|CRPIX[0-9]|PC[0-9]_[0-9]|CDELT[0-9]|CD[0-9]_[0-9]|CTYPE[0-9]|CUNIT[0-9]|CRVAL[0-9]|PV[0-9]_[0-9]|PS[0-9]_[0-9]|RADESYS|LONPOLE|LATPOLE)([A-Z])/;
     if( !this.raw.header ){
@@ -5046,6 +5050,13 @@ JS9.Image.prototype.initWCS = function(header){
     this.freeWCS();
     // init object to hold alt wcs objects
     this.raw.altwcs = {};
+    // modern adapters accept full header strings directly,
+    // while legacy pointer-mode adapters expect an emscripten heap pointer.
+    wcsInitMode = ((JS9.fits && JS9.fits.wcsInitMode) || JS9.wcsInitMode || "pointer")
+	.toString().trim().toLowerCase();
+    if( wcsInitMode !== "header" ){
+	wcsInitMode = "pointer";
+    }
     // set up the default wcs, using the original header params
     alt = "default";
     this.raw.altwcs[alt] = {};
@@ -5076,20 +5087,32 @@ JS9.Image.prototype.initWCS = function(header){
     for( key of Object.keys(this.raw.altwcs) ){
 	// loop through alt wcs objects
 	s = JS9.raw2FITS(this.raw.altwcs[key].header);
-	// too large headers blow Emscripten's stack space
-	// this.raw.altwcs[key].wcs = JS9.initwcs(s, hlen);
-	// so we have to copy the header to the heap:
-	// allocate space for the string in the emscripten heap
-	bufsize = s.length + 1;
-	try{ buf = JS9.vmalloc(bufsize); }
-	catch(e){ JS9.error(`can't malloc for wcsinit: ${bufsize}`, e); }
-	// copy the string to the heap
-	try{ JS9.vstrcpy(s, buf); }
-	catch(e){ JS9.error(`can't copy for wcsinit: ${bufsize}`, e); }
-	// call the wcsinit routine, passing the heap pointer
-	this.raw.altwcs[key].wcs = JS9.initwcs(buf, hlen);
-	// free heap space
-	JS9.vfree(buf);
+	if( wcsInitMode === "header" ){
+	    // modern adapter path: pass FITS header directly.
+	    try{
+		this.raw.altwcs[key].wcs = JS9.initwcs(s, hlen);
+	    }
+	    catch(e){
+		this.raw.altwcs[key].wcs = 0;
+		JS9.error("can't initialize WCS from header string", e);
+	    }
+	} else {
+	    // legacy pointer-mode path: pass pointer to emscripten heap memory.
+	    // too large headers blow Emscripten's stack space
+	    // this.raw.altwcs[key].wcs = JS9.initwcs(s, hlen);
+	    // so we have to copy the header to the heap:
+	    // allocate space for the string in the emscripten heap
+	    bufsize = s.length + 1;
+	    try{ buf = JS9.vmalloc(bufsize); }
+	    catch(e){ JS9.error(`can't malloc for wcsinit: ${bufsize}`, e); }
+	    // copy the string to the heap
+	    try{ JS9.vstrcpy(s, buf); }
+	    catch(e){ JS9.error(`can't copy for wcsinit: ${bufsize}`, e); }
+	    // call the wcsinit routine, passing the heap pointer
+	    this.raw.altwcs[key].wcs = JS9.initwcs(buf, hlen);
+	    // free heap space
+	    JS9.vfree(buf);
+	}
 	// get info about the wcs
 	if( this.raw.altwcs[key].wcs > 0 ){
 	    try{ this.raw.altwcs[key].wcsinfo =
@@ -7302,10 +7325,75 @@ JS9.Image.prototype.dataminmax = function(dmin, dmax){
 
 // the zscale calculation
 JS9.Image.prototype.zscale = function(setvals){
-    let s, rawdata, bufsize, buf, vals;
+    let s, rawdata, bufsize, buf, vals, res, z1, z2;
+    const parseZscaleResult = (result) => {
+	let arr;
+	if( JS9.isNull(result) || result === undefined ){
+	    return null;
+	}
+	if( $.isArray(result) ){
+	    if( result.length >= 2 ){
+		return [parseFloat(result[0]), parseFloat(result[1])];
+	    }
+	    return null;
+	}
+	if( typeof result === "object" ){
+	    if( JS9.notNull(result.z1) && JS9.notNull(result.z2) ){
+		return [parseFloat(result.z1), parseFloat(result.z2)];
+	    }
+	    return null;
+	}
+	if( typeof result === "string" ){
+	    arr = result.trim().split(/\s+/);
+	    if( arr.length >= 2 ){
+		return [parseFloat(arr[0]), parseFloat(arr[1])];
+	    }
+	}
+	return null;
+    };
     // sanity check
-    if( !JS9.zscale || !this.raw || !this.raw.data ){ return this; }
+    if( !this.raw || !this.raw.data ){ return this; }
     rawdata = this.raw.data;
+    // preferred path: use zscale implementation supplied by the active FITS adapter
+    if( JS9.fits && typeof JS9.fits.computeZscale === "function" ){
+	try{
+	    res = JS9.fits.computeZscale(
+		rawdata,
+		this.raw.width,
+		this.raw.height,
+		this.raw.bitpix,
+		{
+		    contrast: this.params.zscalecontrast,
+		    numsamples: this.params.zscalesamples,
+		    perline: this.params.zscaleline
+		}
+	    );
+	    vals = parseZscaleResult(res);
+	    if( vals ){
+		z1 = vals[0];
+		z2 = vals[1];
+		if( Number.isFinite(z1) && Number.isFinite(z2) ){
+		    this.params.z1 = z1;
+		    this.params.z2 = z2;
+		    if( setvals === "zmax" ){
+			this.params.scalemin = this.params.z1;
+			this.params.scalemax = this.raw.dmax;
+		    } else if( setvals ){
+			this.params.scalemin = this.params.z1;
+			this.params.scalemax = this.params.z2;
+		    }
+		    this.params.precision =
+			JS9.floatPrecision(this.params.scalemin, this.params.scalemax);
+		    return this;
+		}
+	    }
+	    JS9.log("adapter computeZscale() returned invalid values, using fallback path");
+	}
+	catch(e){
+	    JS9.log("adapter computeZscale() failed, using fallback path", e);
+	}
+    }
+    if( !JS9.zscale ){ return this; }
     // allocate space for the image in the emscripten heap
     bufsize = rawdata.length * rawdata.BYTES_PER_ELEMENT;
     try{ buf = JS9.vmalloc(bufsize); }
@@ -7399,6 +7487,11 @@ JS9.Image.prototype.countsInRegions = function(...args){
     if( !this.raw.hdu || !this.raw.hdu.fits || !this.raw.hdu.fits.vfile ){
 	JS9.error(`no virtual file available for regcnts: ${this.id}`);
     }
+    if( !(JS9.fits && JS9.fits.capabilities &&
+	  JS9.fits.capabilities.analysis) ||
+	typeof JS9.regcnts !== "function" ){
+	JS9.error("countsInRegions is not supported by the active FITS adapter");
+    }
     // convert json to an object
     for(i=0; i<args.length; i++){
 	s = args[i];
@@ -7470,6 +7563,9 @@ JS9.Image.prototype.countsInRegions = function(...args){
 		cmdswitches += ` -b ${bin}`;
 	    } else {
 		// for images, make a temporary binned file
+		if( typeof JS9.imsection !== "function" ){
+		    JS9.error("countsInRegions image reduction requires imsection capability in the active FITS adapter");
+		}
 		bvfile = `bin${bin}_${vfile.split("/").reverse()[0]}`;
 		sect = `0@0,0@0,${bin}`;
 		JS9.imsection(vfile, bvfile, sect, "");
@@ -8378,7 +8474,16 @@ JS9.Image.prototype.reproject = function(wcsim, opts){
 	return theader;
     };
     // sanity checks
-    if( !JS9.reproject || !wcsim || this === wcsim ){ return; }
+    if( !wcsim || this === wcsim ){ return; }
+    if( !(JS9.fits && JS9.fits.capabilities &&
+	  JS9.fits.capabilities.reprojection) ||
+	typeof JS9.reproject !== "function" ){
+	JS9.error("reproject is not supported by the active FITS adapter");
+    }
+    if( typeof JS9.vfile !== "function" ||
+	typeof JS9.vunlink !== "function" ){
+	JS9.error("reproject requires virtual-file support in the active FITS adapter");
+    }
     if( !this.raws || !this.raws[0] ){
 	JS9.error("no raw data for reprojection");
     }
@@ -8598,7 +8703,12 @@ JS9.Image.prototype.reprojectData = function(...args){
     let i, im, ovfile;
     let [wcsim, opts] = args;
     // sanity check
-    if( !wcsim || !JS9.reproject ){ return; }
+    if( !wcsim ){ return; }
+    if( !(JS9.fits && JS9.fits.capabilities &&
+	  JS9.fits.capabilities.reprojection) ||
+	typeof JS9.reproject !== "function" ){
+	JS9.error("reprojectData is not supported by the active FITS adapter");
+    }
     // is this a string containing an image name or WCS values?
     if( typeof wcsim === "string" ){
 	if( wcsim === "all" ){
@@ -11125,6 +11235,20 @@ JS9.Display.prototype.createMosaic = function(ims, opts){
     if( typeof opts === "string" ){
 	try{ opts = JSON.parse(opts); }
 	catch(e){ JS9.error(`can't parse createMosaic opts: ${opts}`, e); }
+    }
+    if( !(JS9.fits && JS9.fits.capabilities &&
+	  JS9.fits.capabilities.reprojection) ||
+	typeof JS9.reproject !== "function" ||
+	typeof JS9.madd !== "function" ||
+	typeof JS9.imgtbl !== "function" ||
+	typeof JS9.makehdr !== "function" ||
+	typeof JS9.shrinkhdr !== "function" ||
+	typeof JS9.imsection !== "function" ||
+	typeof JS9.vfile !== "function" ||
+	typeof JS9.vread !== "function" ||
+	typeof JS9.vsize !== "function" ||
+	typeof JS9.vunlink !== "function" ){
+	JS9.error("createMosaic is not supported by the active FITS adapter");
     }
     // reduce can be taken from the global value
     opts.reduce = opts.reduce || JS9.globalOpts.reduceMosaic;
@@ -21987,17 +22111,255 @@ JS9.saveAs = function(blob, pathname){
     }
 }
 
-// configure or return the fits library
-JS9.fitsLibrary = function(s){
-    let t;
-    if( !s ){
-	return JS9.fits.name;
+// registered FITS adapters, keyed by canonical name
+JS9.fitsAdapters = JS9.fitsAdapters || {};
+JS9.fitsAdapterAliases = JS9.fitsAdapterAliases || {};
+JS9.fitsAdapterCapabilityDefaults = {
+    fits: true,
+    wcs: false,
+    scaling: false,
+    reprojection: false,
+    analysis: false,
+    compression: false
+};
+JS9.fitsRuntimeMethodNames = [
+    "vmalloc",
+    "vfree",
+    "vmemcpy",
+    "vstrcpy",
+    "vfile",
+    "vread",
+    "vunlink",
+    "vsize",
+    "vmount",
+    "arrfile",
+    "listhdu",
+    "initwcs",
+    "freewcs",
+    "wcsinfo",
+    "wcssys",
+    "wcsunits",
+    "pix2wcs",
+    "wcs2pix",
+    "reg2wcs",
+    "saostrtod",
+    "saodtostr",
+    "saodtype",
+    "zscale",
+    "tanhdr",
+    "reproject",
+    "madd",
+    "imgtbl",
+    "makehdr",
+    "shrinkhdr",
+    "imsection",
+    "regcnts"
+];
+JS9.fitsRuntimeValueNames = [
+    "vheap"
+];
+JS9.fitsRuntimeFallbacks = JS9.fitsRuntimeFallbacks || {};
+
+JS9.captureFITSRuntimeFallbacks = function(){
+    let i, key;
+    for(i=0; i<JS9.fitsRuntimeMethodNames.length; i++){
+	key = JS9.fitsRuntimeMethodNames[i];
+	JS9.fitsRuntimeFallbacks[key] = JS9[key];
     }
-    t = s.toLowerCase();
-    switch(t){
-    case "astroem":
-    case "cfitsio":
-	JS9.fits = Astroem;
+    for(i=0; i<JS9.fitsRuntimeValueNames.length; i++){
+	key = JS9.fitsRuntimeValueNames[i];
+	JS9.fitsRuntimeFallbacks[key] = JS9[key];
+    }
+    if( !JS9.wcsInitMode ){
+	JS9.wcsInitMode = "pointer";
+    }
+};
+
+JS9.bindFITSRuntime = function(adapter){
+    let i, key, fallback, candidate, mode;
+    adapter = adapter || JS9.fits || {};
+    for(i=0; i<JS9.fitsRuntimeMethodNames.length; i++){
+	key = JS9.fitsRuntimeMethodNames[i];
+	candidate = adapter[key];
+	fallback = JS9.fitsRuntimeFallbacks[key];
+	if( typeof candidate === "function" ){
+	    JS9[key] = candidate.bind(adapter);
+	} else if( {}.hasOwnProperty.call(JS9.fitsRuntimeFallbacks, key) ){
+	    JS9[key] = fallback;
+	}
+    }
+    for(i=0; i<JS9.fitsRuntimeValueNames.length; i++){
+	key = JS9.fitsRuntimeValueNames[i];
+	candidate = adapter[key];
+	fallback = JS9.fitsRuntimeFallbacks[key];
+	if( candidate !== undefined ){
+	    JS9[key] = candidate;
+	} else if( {}.hasOwnProperty.call(JS9.fitsRuntimeFallbacks, key) ){
+	    JS9[key] = fallback;
+	}
+    }
+    mode = (adapter.wcsInitMode || "").toString().trim().toLowerCase();
+    JS9.wcsInitMode = (mode === "header") ? "header" : "pointer";
+};
+
+JS9.resolveFITSAdapterName = function(name){
+    const alias = (name || "").toString().trim().toLowerCase();
+    if( !alias ){
+	return "";
+    }
+    return JS9.fitsAdapterAliases[alias] || alias;
+};
+
+JS9.validateFITSAdapter = function(adapter, name){
+    const missing = [];
+    const required = ["handleFITSFile", "getFITSImage", "cleanupFITSFile", "maxFITSMemory"];
+    let i, key;
+    const inferCapability = (capability, methods) => {
+	let j;
+	if( typeof adapter.capabilities[capability] === "boolean" ){
+	    return adapter.capabilities[capability];
+	}
+	for(j=0; j<methods.length; j++){
+	    if( typeof adapter[methods[j]] !== "function" ){
+		return false;
+	    }
+	}
+	return true;
+    };
+    if( !adapter || typeof adapter !== "object" ){
+	JS9.error(`invalid FITS adapter '${name}': expected an object`);
+    }
+    for(i=0; i<required.length; i++){
+	key = required[i];
+	if( typeof adapter[key] !== "function" ){
+	    missing.push(key);
+	}
+    }
+    if( missing.length ){
+	JS9.error(`invalid FITS adapter '${name}': missing method(s): ${missing.join(", ")}`);
+    }
+    adapter.options = adapter.options || {};
+    adapter.capabilities = $.extend(
+	{},
+	JS9.fitsAdapterCapabilityDefaults,
+	adapter.capabilities || {}
+    );
+    adapter.capabilities.fits = inferCapability(
+	"fits",
+	["handleFITSFile", "getFITSImage", "cleanupFITSFile", "maxFITSMemory"]
+    );
+    adapter.capabilities.wcs = inferCapability(
+	"wcs",
+	["initwcs", "pix2wcs", "wcs2pix"]
+    );
+    adapter.capabilities.scaling = inferCapability(
+	"scaling",
+	["computeZscale"]
+    ) || inferCapability("scaling", ["zscale"]);
+    adapter.capabilities.reprojection = inferCapability(
+	"reprojection",
+	["reproject", "madd", "imgtbl", "makehdr", "shrinkhdr"]
+    );
+    adapter.capabilities.analysis = inferCapability(
+	"analysis",
+	["regcnts"]
+    );
+    adapter.capabilities.compression = inferCapability(
+	"compression",
+	["compress", "decompress"]
+    );
+    return adapter;
+};
+
+JS9.registerFITSAdapter = function(name, adapterOrFactory, opts){
+    let i;
+    let canonical;
+    let aliases;
+    opts = opts || {};
+    canonical = JS9.resolveFITSAdapterName(name);
+    if( !canonical ){
+	JS9.error("missing FITS adapter name in JS9.registerFITSAdapter()");
+    }
+    JS9.fitsAdapters[canonical] = {
+	name: canonical,
+	factory: adapterOrFactory,
+	configure: opts.configure
+    };
+    JS9.fitsAdapterAliases[canonical] = canonical;
+    aliases = opts.aliases || [];
+    for(i=0; i<aliases.length; i++){
+	if( aliases[i] ){
+	    JS9.fitsAdapterAliases[aliases[i].toString().trim().toLowerCase()] = canonical;
+	}
+    }
+    return canonical;
+};
+
+JS9.unregisterFITSAdapter = function(name){
+    const canonical = JS9.resolveFITSAdapterName(name);
+    const aliases = Object.keys(JS9.fitsAdapterAliases);
+    let i, alias;
+    if( !canonical ){
+	return false;
+    }
+    delete JS9.fitsAdapters[canonical];
+    for(i=0; i<aliases.length; i++){
+	alias = aliases[i];
+	if( JS9.fitsAdapterAliases[alias] === canonical ){
+	    delete JS9.fitsAdapterAliases[alias];
+	}
+    }
+    return true;
+};
+
+JS9.listFITSAdapters = function(){
+    return Object.keys(JS9.fitsAdapters).sort();
+};
+
+JS9.useFITSAdapter = function(name, cfg){
+    let entry, adapter;
+    const canonical = JS9.resolveFITSAdapterName(name);
+    if( !canonical ){
+	return null;
+    }
+    entry = JS9.fitsAdapters[canonical];
+    if( !entry ){
+	return null;
+    }
+    if( typeof entry.factory === "function" ){
+	adapter = entry.factory(cfg || {});
+    } else if( entry.factory && typeof entry.factory === "object" ){
+	adapter = entry.factory;
+    } else {
+	JS9.error(`invalid FITS adapter '${canonical}': expected object or factory`);
+    }
+    JS9.validateFITSAdapter(adapter, canonical);
+    if( typeof entry.configure === "function" ){
+	entry.configure(adapter, cfg || {});
+    }
+    JS9.fits = adapter;
+    JS9.fits.ready = true;
+    JS9.fits.name = canonical;
+    JS9.fits.options = JS9.fits.options || {};
+    JS9.fits.options.error = JS9.error;
+    JS9.fits.options.waiting = JS9.waiting;
+    if( typeof JS9.bindFITSRuntime === "function" ){
+	JS9.bindFITSRuntime(JS9.fits);
+    }
+    return canonical;
+};
+
+// configure or return the fits library
+JS9.fitsLibrary = function(s, opts){
+    let t;
+    opts = opts || {};
+    const fail = (message) => {
+	if( opts.silent ){
+	    throw new Error(message);
+	}
+	JS9.error(message);
+    };
+    const configureDefaultOptions = () => {
 	// set up default options
 	JS9.fits.options = JS9.fits.options || {};
 	JS9.fits.options.handler = JS9.NewFitsImage;
@@ -22043,17 +22405,60 @@ JS9.fitsLibrary = function(s){
 	if( JS9.fits.maxFITSMemory && JS9.globalOpts.maxMemory ){
 	    JS9.fits.maxFITSMemory(JS9.globalOpts.maxMemory);
 	}
+    };
+    const registerBuiltinAdapters = () => {
+	if( {}.hasOwnProperty.call(window, "Fixi") &&
+	    typeof Fixi.createRustWasmAdapter === "function" ){
+	    JS9.registerFITSAdapter("fixi", () => {
+		return Fixi.createRustWasmAdapter();
+	    }, {
+		aliases: ["fixi-js"],
+		configure: (adapter) => {
+		    if( adapter && adapter.backend &&
+			typeof Fixi.configureForJS9 === "function" ){
+			Fixi.configureForJS9(adapter, {
+			    globalOpts: JS9.globalOpts,
+			    userFits: JS9.userOpts.fits,
+			    handler: JS9.NewFitsImage,
+			    error: JS9.error,
+			    waiting: JS9.waiting,
+			    maxMemory: JS9.globalOpts.maxMemory,
+			    fitsCompliance: JS9.globalOpts.fitsCompliance
+			});
+		    } else {
+			configureDefaultOptions();
+		    }
+		}
+	    });
+	}
+    };
+    registerBuiltinAdapters();
+    if( !s ){
+	return (JS9.fits && JS9.fits.name) ? JS9.fits.name : "";
+    }
+    t = JS9.useFITSAdapter(s, {
+	globalOpts: JS9.globalOpts,
+	userFits: JS9.userOpts.fits
+    });
+    if( t ){
+	return t;
+    }
+    switch(s.toString().toLowerCase()){
+    case "fixi":
+    case "fixi-js":
+	if( !{}.hasOwnProperty.call(window, "Fixi") ){
+	    fail("fixi library is not available");
+	}
+	fail("fixi rust/wasm backend is not available");
+	break;
+    case "cfitsio":
+	fail("legacy cfitsio backend is not available in this JS9 build");
 	break;
     default:
-	JS9.error(`unknown fits library: ${s}`);
+	fail(`unknown fits library: ${s}`);
 	break;
     }
-    // common code
-    JS9.fits.ready = true;
-    JS9.fits.name = t;
-    JS9.fits.options.error = JS9.error;
-    JS9.fits.options.waiting = JS9.waiting;
-    return t;
+    return "";
 };
 
 // check for 'real' FITS handling routine and call it. This routine can:
@@ -24597,79 +25002,218 @@ JS9.instantiatePlugins = function(){
 // ---------------------------------------------------------------------
 
 JS9.initEmscripten = function(){
-    const opts = {responseType: "arraybuffer", allowCache: true};
-    // sanity check: do only once
-    if( {}.hasOwnProperty.call(window, "Astroem") ){ return; }
-    // load astroem, based on whether we have native WebAssembly or not
-    if( typeof WebAssembly === "object" && JS9.globalOpts.useWasm ){
-	// use site-specified file if available, else default file
-	// (e.g., if js9 files weren't installed in the default location)
-	JS9.globalOpts.astroemWasm =
-	    JS9.InstallDir(Module.wasmBinaryFile || "astroemw.wasm");
-	// load astroem wasm file
-	JS9.fetchURL(JS9.globalOpts.astroemWasm, null, opts, (data) => {
-	    // tell Emscripten we already have wasm binary
-	    // eslint-disable-next-line no-unused-vars
-	    Module.wasmBinary = data;
-	    JS9.globalOpts.astroemURL = JS9.InstallDir("astroemw.js");
-	    // load astroem js (with wasm) file
-	    try{
-		JS9.loadScript(JS9.globalOpts.astroemURL);
-	    }
-	    catch(e){
-		JS9.error(`can't load ${JS9.globalOpts.astroemURL}`);
-	    }
-	});
-    } else {
-	JS9.globalOpts.astroemURL = JS9.InstallDir("astroem.js");
-	// load astroem js (only) file
+    const loadFixi = (next) => {
+	let fixiURL;
+	if( !JS9.globalOpts.fixiURL ||
+	    {}.hasOwnProperty.call(window, "Fixi") ){
+	    next();
+	    return;
+	}
+	fixiURL = JS9.InstallDir(JS9.globalOpts.fixiURL);
 	try{
-	    JS9.loadScript(JS9.globalOpts.astroemURL);
+	    // optional extraction file: continue even if unavailable
+	    JS9.loadScript(fixiURL, next, next);
 	}
-	catch(e){
-	    JS9.error(`can't load ${JS9.globalOpts.astroemURL}`);
+	catch(ignore){
+	    next();
 	}
-    }
+    };
+    // sanity check: do only once
+    if( JS9.fits && JS9.fits.ready ){ return; }
+    // FITS is initialized via extracted runtimes by default (fixi Rust/WASM).
+    loadFixi(() => {
+	JS9.initFITS();
+    });
 };
 
 // initialize FITS support
 JS9.initFITS = function(){
-    // initialize astronomy emscripten routines (wcslib, etc), if possible
-    if( {}.hasOwnProperty.call(window, "Astroem") ){
-	JS9.vmalloc = Astroem.vmalloc;
-	JS9.vfree = Astroem.vfree;
-	JS9.vheap = Astroem.vheap;
-	JS9.vmemcpy = Astroem.vmemcpy;
-	JS9.vstrcpy = Astroem.vstrcpy;
-	JS9.vfile = Astroem.vfile;
-	JS9.vread = Astroem.vread;
-	JS9.vunlink = Astroem.vunlink;
-	JS9.vsize = Astroem.vsize;
-	JS9.vmount = Astroem.vmount;
-	JS9.arrfile = Astroem.arrfile;
-	JS9.listhdu = Astroem.listhdu;
-	JS9.initwcs = Astroem.initwcs;
-	JS9.freewcs = Astroem.freewcs;
-	JS9.wcsinfo = Astroem.wcsinfo;
-	JS9.wcssys = Astroem.wcssys;
-	JS9.wcsunits = Astroem.wcsunits;
-	JS9.pix2wcs = Astroem.pix2wcs;
-	JS9.wcs2pix = Astroem.wcs2pix;
-	JS9.reg2wcs = Astroem.reg2wcs;
-	JS9.saostrtod = Astroem.saostrtod;
-	JS9.saodtostr = Astroem.saodtostr;
-	JS9.saodtype = Astroem.saodtype;
-	JS9.zscale = Astroem.zscale;
-	JS9.tanhdr = Astroem.tanhdr;
-	JS9.reproject = Astroem.reproject;
-	JS9.madd = Astroem.madd;
-	JS9.imgtbl = Astroem.imgtbl;
-	JS9.makehdr = Astroem.makehdr;
-	JS9.shrinkhdr = Astroem.shrinkhdr;
-	JS9.imsection = Astroem.imsection;
-	JS9.regcnts = Astroem.regcnts;
-	JS9.fitsLibrary("cfitsio");
+    let initOpts;
+    let fixiBaseURL;
+    const signalJS9Ready = () => {
+	if( JS9.helper.ready && JS9.inited && !JS9.readied ){
+	    $(document).trigger("JS9:ready", {status: "OK"});
+	}
+    };
+    const preferredAdapter = () => {
+	const configured = JS9.globalOpts.fitsAdapter;
+	if( JS9.notNull(configured) ){
+	    if( String(configured).trim() ){
+		return String(configured).trim();
+	    }
+	}
+	return "fixi";
+    };
+    const adapterIdentity = (name) => {
+	const lowered = (name || "").toString().trim().toLowerCase();
+	let resolved;
+	if( !lowered ){
+	    return "";
+	}
+	resolved = JS9.resolveFITSAdapterName(lowered);
+	if( resolved && resolved !== lowered ){
+	    return resolved;
+	}
+	switch(lowered){
+	case "fixi-js":
+	    return "fixi";
+	default:
+	    return lowered;
+	}
+    };
+    const adapterCandidates = () => {
+	const out = [];
+	const seen = {};
+	const add = (name) => {
+	    const raw = (name || "").toString().trim();
+	    const id = adapterIdentity(raw);
+	    if( !raw || !id || seen[id] ){
+		return;
+	    }
+	    seen[id] = true;
+	    out.push(raw);
+	};
+	add(preferredAdapter());
+	add("fixi");
+	return out;
+    };
+    const installRuntimeFallbacks = () => {
+	// default runtime fallbacks when no adapter supplies a capability.
+	JS9.vmalloc = JS9.vmalloc || (() => {
+	    JS9.error("virtual FITS memory operations are not available in the active FITS adapter");
+	});
+	JS9.vfree = JS9.vfree || (() => {});
+	JS9.vheap = JS9.vheap || null;
+	JS9.vmemcpy = JS9.vmemcpy || (() => {});
+	JS9.vstrcpy = JS9.vstrcpy || (() => {});
+	JS9.vfile = JS9.vfile || (() => {
+	    JS9.error("virtual FITS files are not available in the active FITS adapter");
+	});
+	JS9.vread = JS9.vread || (() => null);
+	JS9.vunlink = JS9.vunlink || (() => {});
+	JS9.vsize = JS9.vsize || (() => -1);
+	JS9.vmount = JS9.vmount || (() => 0);
+	JS9.arrfile = JS9.arrfile || (() => null);
+	JS9.listhdu = JS9.listhdu || (() => null);
+	JS9.initwcs = JS9.initwcs || (() => 0);
+	JS9.freewcs = JS9.freewcs || (() => 0);
+	JS9.wcsinfo = JS9.wcsinfo || (() => null);
+	JS9.wcssys = JS9.wcssys || (() => null);
+	JS9.wcsunits = JS9.wcsunits || (() => null);
+	JS9.pix2wcs = JS9.pix2wcs || (() => "");
+	JS9.wcs2pix = JS9.wcs2pix || (() => "");
+	JS9.reg2wcs = JS9.reg2wcs || (() => "");
+	JS9.saostrtod = JS9.saostrtod || ((x) => parseFloat(x || 0));
+	JS9.saodtostr = JS9.saodtostr || ((x) => String(x));
+	JS9.saodtype = JS9.saodtype || (() => 0);
+	JS9.zscale = JS9.zscale || null;
+	JS9.tanhdr = JS9.tanhdr || null;
+	JS9.reproject = JS9.reproject || null;
+	JS9.madd = JS9.madd || null;
+	JS9.imgtbl = JS9.imgtbl || null;
+	JS9.makehdr = JS9.makehdr || null;
+	JS9.shrinkhdr = JS9.shrinkhdr || null;
+	JS9.imsection = JS9.imsection || null;
+	JS9.regcnts = JS9.regcnts || null;
+    };
+    const mountHostFS = () => {
+	if( window.electron && JS9.hostFS && typeof JS9.vmount === "function" ){
+	    try{
+		if( !JS9.vmount("/", JS9.hostFS) ){
+		    delete JS9.hostFS;
+		}
+	    }
+	    catch(ignore){
+		delete JS9.hostFS;
+	    }
+	}
+    };
+    const initFixiRuntime = () => {
+	return new Promise((resolve, reject) => {
+	    if( !{}.hasOwnProperty.call(window, "Fixi") ){
+		reject(new Error("fixi runtime not loaded"));
+		return;
+	    }
+	    if( typeof Fixi.init !== "function" ){
+		resolve();
+		return;
+	    }
+	    initOpts = {fitsCompliance: JS9.globalOpts.fitsCompliance};
+	    if( JS9.globalOpts.fixiURL ){
+		fixiBaseURL = JS9.InstallDir(JS9.globalOpts.fixiURL).replace(/[^/]*$/, "");
+		initOpts.baseURL = fixiBaseURL;
+	    }
+	    if( JS9.globalOpts.fixiWasmURL ){
+		initOpts.wasmURL = JS9.InstallDir(JS9.globalOpts.fixiWasmURL);
+	    }
+	    Fixi.init(initOpts).then(() => {
+		resolve();
+	    }).catch((e) => {
+		reject(e);
+	    });
+	});
+    };
+    const activateAdapter = (name) => {
+	const selected = JS9.fitsLibrary(name, {silent: true});
+	if( !selected ){
+	    throw new Error(`unable to activate FITS adapter: ${name}`);
+	}
+    };
+    const finishSuccess = () => {
+	JS9.tmp.initFITSInProgress = false;
+	mountHostFS();
+	signalJS9Ready();
+    };
+    const finishFailure = (error) => {
+	JS9.tmp.initFITSInProgress = false;
+	JS9.error("no FITS backend available (check fixi runtime and adapter configuration)", error);
+    };
+    const activateSequentially = (candidates, idx, lastError) => {
+	let name, identity;
+	const next = (error) => {
+	    activateSequentially(candidates, idx + 1, error || lastError);
+	};
+	if( idx >= candidates.length ){
+	    finishFailure(lastError || new Error("unknown FITS initialization failure"));
+	    return;
+	}
+	name = candidates[idx];
+	identity = adapterIdentity(name);
+	if( identity === "fixi" ){
+	    initFixiRuntime().then(() => {
+		try{
+		    activateAdapter(name);
+		    finishSuccess();
+		}
+		catch(e){
+		    next(e);
+		}
+	    }).catch((e) => {
+		next(e);
+	    });
+	    return;
+	}
+	try{
+	    activateAdapter(name);
+	    finishSuccess();
+	}
+	catch(e){
+	    next(e);
+	}
+    };
+    // sanity check: do only once
+    if( JS9.fits && JS9.fits.ready ){
+	return;
     }
+    if( JS9.tmp.initFITSInProgress ){
+	return;
+    }
+    JS9.tmp.initFITSInProgress = true;
+    installRuntimeFallbacks();
+    if( typeof JS9.captureFITSRuntimeFallbacks === "function" ){
+	JS9.captureFITSRuntimeFallbacks();
+    }
+    activateSequentially(adapterCandidates(), 0, null);
 };
 
 // init colormaps
@@ -26336,8 +26880,6 @@ JS9.mkPublic("LoadWindow", function(...args){
         // if page is generated on the server side, hardwire ...
         // if JS9 is not installed, hardwire ...
         head = document.getElementsByTagName("head")[0].innerHTML;
-	// remove load of astroem[w].js, so it will be loaded during init
-	head = head.replace(/src=['"].*astroemw?\.js['"]/, "");
         // but why doesn't the returned header contain the js9 js file??
 	// umm... it seems to have it, at least FF does as of 8/25/15 ...
 	if( !head.match(/src=["'].*js9\.js/)      &&
@@ -28324,11 +28866,11 @@ JS9.init = function(){
 	try{ JS9.worker = new JS9.WebWorker(JS9.InstallDir(JS9.WORKERFILE)); }
 	catch(e){ /* empty */ }
     }
-    // for allinone files, emscripten is already loaded so init FITS now
+    // for allinone files, runtime scripts are already loaded so init FITS now
     if( JS9.allinone ){
 	JS9.initFITS();
     } else {
-	// load emscripten, which will trigger init FITS later
+	// load optional runtime scripts, then initialize FITS
 	JS9.initEmscripten();
     }
     // desktop js9 gets helper from command line via the environment
@@ -28514,29 +29056,6 @@ $(document).ready(() => {
     });
     $(document).on("JS9:init", () => {
 	if( JS9.helper.ready && JS9.fits.ready ){
-	    // ... signal we are completely ready
-	    $(document).trigger("JS9:ready", {status: "OK"});
-	}
-    });
-    // ... might need to wait for astroem (via emscripten) to finish ...
-    $(document).on("astroem:ready", () => {
-	// astroem is loaded: we can now initialize FITS support
-	JS9.initFITS();
-	// if Node.js is available (i.e., if enabled in the Electron app),
-	// try to mount the local file system
-	if( window.electron && JS9.hostFS ){
-	    try{
-		// mount local file system or clear mount point
-		if( !JS9.vmount("/", JS9.hostFS) ){
-		    delete JS9.hostFS;
-		}
-	    }
-	    catch(e){
-		// no mount point for local file system
-		delete JS9.hostFS;
-	    }
-	}
-	if( JS9.helper.ready && JS9.inited ){
 	    // ... signal we are completely ready
 	    $(document).trigger("JS9:ready", {status: "OK"});
 	}

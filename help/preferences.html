@@ -87,17 +87,16 @@ prefix the name of a menu option with '<b>#</b>', that option is disabled.
 <li><p><b>Module:</b> a global JavaScript object with attributes that
 Emscripten-generated code calls at various points in its execution.
 You can set or override properties for this object by adding them to
-the <b>emscriptenOpts</b> object in the js9prefs.js file.  One
-important case occurs when you have installed the astroemw.wasm binary
-file in a location other than the JS9 install directory. You would
-then use Emscripten's <b>wasmBinaryFile</b> property to specify a path
-to this file, relative to the JS9 install directory. For example, if
-the JS9 install directory and the resources directory are at the same
-level in the directory hierarchy:
+the <b>emscriptenOpts</b> object in the js9prefs.js file. For FITS runtime
+configuration, use JS9 global options. One important case occurs when you
+have installed the fixi WASM binary in a location other than the JS9 install
+directory. You can then set <b>fixiWasmURL</b> in <b>globalOpts</b>. For
+example, if the JS9 install directory and the resources directory are at the
+same level in the directory hierarchy:
 <pre>
 var JS9Prefs = {
-  "emscriptenOpts": {
-     "wasmBinaryFile": "../resources/js/astroemw.wasm"
+  "globalOpts": {
+     "fixiWasmURL": "../resources/js/fixi_core.wasm"
   },
   # other preferences ...
 }

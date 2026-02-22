@@ -192,10 +192,10 @@ to the main web page. If you must move the js9.css file, you will also
 need to add the <b>installDir</b> property to the <b>globalOpts</b>
 object within js9prefs.js, specifying the relative path from the web
 page to the JS9 install directory. Failure to do this correctly will
-cause a host of problems, starting with JS9 not loading astroem.js and
+cause a host of problems, starting with JS9 not loading the fixi runtime and
 js9worker.js.  Please contact us if you have problems (the first
 indication of which probably will be JavaScript error messages when
-failing to load astroem.js and js9worker.js.)
+failing to load fixi.js and js9worker.js.)
 
 <p>
 As described in <a href="./webpage.html">Creating a JS9 Web Page</a>,
@@ -218,9 +218,7 @@ look something like this:
 </pre>
 Also during startup, JS9 will asynchronously load
 the <b>js9worker.js</b> file in order to create a worker process and
-will load either the <b>astroem.js</b> file or the <b>astroemw.js</b>
-and <b>astroemw.wasm</b> files, depending on whether
-<a href="http://webassembly.org/">WebAssembly</a> is supported on your browser.
+will load the <b>fixi.js</b> and <b>fixi_core.wasm</b> runtime files.
 
 <p>
 Although none of these files are large, it always is worthwhile making

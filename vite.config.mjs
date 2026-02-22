@@ -5,20 +5,17 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 const runtimeDirs = [
   "analysis-plugins",
   "analysis-wrappers",
-  "astroem",
   "css",
   "help",
   "images",
   "js",
   "node",
+  "node_modules/@onekiloparsec/fixi-js/dist",
   "params",
   "plugins"
 ];
 
 const runtimeFiles = [
-  "astroem.js",
-  "astroemw.js",
-  "astroemw.wasm",
   "favicon.ico",
   "js9.css",
   "js9support.css",

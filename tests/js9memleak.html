@@ -22,11 +22,11 @@
     <ul>
     <li> bring up Developer Tools (opt-cmd-k), click Memory tab
     <li> set Record call stacks, View: Aggregate, Group By: Inverted Call Stack
-    <li> reload this page, take Memory snapshot: astroem.js is largest at 67Mb
+    <li> reload this page, take a baseline Memory snapshot
     <li> click Console tab and execute:
     <li> &nbsp;&nbsp;doit1(N)   to load images N times
     <li> &nbsp;&nbsp;doit1()    to load images until var stop is set to 1
-    <li> each new Memory snapshot: astroem.js should still be largest at 67Mb
+    <li> each new Memory snapshot: memory growth should remain stable
     </ul>
 
     <p>

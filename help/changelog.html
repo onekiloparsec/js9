@@ -35,7 +35,7 @@
 <li> fix bug preventing flip, rotate, rot90 from working in Load() opts
 <li> update emscripten to v3.1.13
 <li> update socket.io to v4.5.1
-<li> update astroem/cfitsio library to v4.1.0
+<li> update cfitsio library to v4.1.0
 </ul>
 
 <h3> Public Release 3.7 (May 16, 2022)</h3>
@@ -56,11 +56,11 @@
 <li> fix bug changing position of a selected region after pan/zoom/flip
 <li> fix bugs in handling text children of grouped regions
 <li> fix bug when saving one slice of a cube, naxis was not always set to 2
-<li> astroem: rearrange a few source files
+<li> legacy FITS runtime: rearrange a few source files
 <li> add Quit() public access routine (Desktop app only)
 <li> es6: use for( key of Object.keys(opts) ){ ... where possible
 <li> es6: change a few functions to arrow functions
-<li> update astroem/post.js to es6 to match emscripten v3.1.x
+<li> update legacy runtime post.js to es6 to match emscripten v3.1.x
 <li> update emscripten to v3.1.10
 <li> update socket.io to v4.5.0
 <li> update fabric.js to v5.2.1
@@ -84,7 +84,7 @@
 <ul>
 <li> fix various problems with placement of panner rectangle
 <li> edit annuli: don't multiply by scale factor when generating circles
-<li> update astroem/cfitsio library to v4.0.0
+<li> update cfitsio library to v4.0.0
 </ul>
 
 <h3> Public Release 3.6 (July 30, 2021)</h3>
@@ -234,7 +234,7 @@
 <li> add JS9.ChangeRegionTags() public routine to add/remove region tags
 <li> reorganize github site (new build directory, src in src, demos in demos)
 <li> make install does not load demos, use make install-demos explicitly
-<li> remove deprecated fitsy code from top level
+<li> remove deprecated FITS JS fallback code from top level
 <li> add JS9.ListRegions(), JS9.EditRegions() public routines
 <li> regions menu: options to save regions using different wcs, also save csv
 <li> separate: add ability to use a CSS Grid instead of light windows
@@ -278,7 +278,7 @@
 <li> update jquery to v3.5.0
 <li> update emscripten to v1.40.1
 <li> update fabric.js to v3.6.3 and enable strokeUniform
-<li> update cfitsio to v3.48 (via astroem repository)
+<li> update cfitsio to v3.48 (via legacy runtime repository)
 <li> update ResizeSensor to v1.2.2
 </ul>
 
@@ -532,7 +532,7 @@
 
 <h3> Public Release 1.12 (July 25, 2017)</h3>
 <ul>
-<li> refactor astroem to use astroem repository of emscripten library byte-code
+<li> refactor legacy FITS runtime to use dedicated emscripten library byte-code repository
 <li> add DisplaySection() public routine
 <li> add ability to extract a section from images (as well as tables)
 <li> add fits2fits configuration params for large files support
@@ -601,7 +601,7 @@
 <li> extend range of FITS files that can be WCS-projected using Montage
 <li> add support in the File menu for saving and loading sessions
 <li> add JS9.LoadSession() and JS9.SaveSession() public routines
-<li> update imexam,fitsy, archive plugins
+<li> update imexam and archive plugins
 <li> update fabric.js to v1.6.3
 <li> update cfitsio to v3.39
 <li> update socket.io to v1.4.5
@@ -645,7 +645,7 @@
 <li> change menu option Color->alpha (0 to 255) to Color->opacity (0.0 to 1.0)
 <li> fix bug when interactively changing panner for non-square images
 <li> fix bug in lut colormap, which truncated the first color
-<li> refactor emscripten astroem package into sub-packages
+<li> refactor emscripten FITS runtime package into sub-packages
 <li> update emscripten to v1.35.0
 </ul>
 
@@ -723,7 +723,7 @@
 <li> ensure that section info is maintained during JS9.RefreshImage()
 <li> prevent preload from happening more than once
 <li> fix broken File->Open menu option
-<li> update emscripten to v1.27, add new optimizations to astroem
+<li> update emscripten to v1.27, add new optimizations to legacy FITS runtime
 </ul>
 
 <h3> Public Release 1.2 (January 4, 2015)</h3>
@@ -772,7 +772,7 @@
 <li> added missing commas in WCS display of polygon points
 <li> corrected WCS for drag/drop of sections of FITS binary tables
 <li> fixed incorrect region size when binning FITS binary tables
-<li> fixed memory leak in astroem reg2wcs routine
+<li> fixed memory leak in legacy reg2wcs routine
 <li> plugin divs can now set height and width using CSS
 <li> added defensive code to remove bash functions from CGI and node calls
 <li> updated fabric.js to 1.4.11

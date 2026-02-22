@@ -17,6 +17,7 @@ Companion structure tracker: `docs/migration/STRUCTURE.md`
 Edit these files/directories as source:
 
 - `node/browser/viewer.js`
+- `../fixi-js/src/fixi.ts` (external sibling repo; FITS adapter source)
 - `node/browser/worker.ts`
 - `node/browser/core/basicUtils.js`
 - `node/helper/helper.js`
@@ -25,7 +26,6 @@ Edit these files/directories as source:
 - `node/cli/regions.ts`
 - `plugins/core/*.js`
 - `plugins/archive/archive.js`
-- `plugins/fitsy/*.js`
 - `plugins/imexam/*.js`
 - `build/*` scripts
 - `Makefile.in`
@@ -46,6 +46,10 @@ Treat these as generated artifacts (do not edit directly):
 - `js9Msg.js` (compatibility wrapper)
 - `js9Helper.js` (compatibility wrapper)
 - `js9PostMessage.js` (compatibility symlink to `node/browser/postMessage.js`)
+
+Local dependency wiring:
+
+- JS9 `package.json` uses `@onekiloparsec/fixi-js: file:../fixi-js` during migration.
 
 Notes:
 

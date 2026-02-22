@@ -490,14 +490,14 @@
         JS9.RefreshImage(fileBlobs[ii%fileBlobs.length],
             {onrefresh: function(){
 		if( (ii++ < nn) && doingheaptest ){
-		    buf = Astroem.vmalloc(heapAlloc);
+		    buf = JS9.vmalloc(heapAlloc);
 		    if( !heapStart ){
 			heapStart = buf;
 		    }
 		    heapCur = buf;
 		    console.log("buf[%s]: %s", ii, buf);
-		    Astroem.vmemcpy(new Uint8Array(heapBuf), buf);
-		    Astroem.vfree(buf);
+		    JS9.vmemcpy(new Uint8Array(heapBuf), buf);
+		    JS9.vfree(buf);
 		    setTimeout(function(){heapTest(nn, ii);}, heapTimeout);
 		} else {
 		    console.log("bytes added to heap in %s iterations: %s = %s - %s",
