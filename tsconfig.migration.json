@@ -4,7 +4,6 @@
     "noEmit": true
   },
   "include": [
-    "node/cli/regions.ts",
     "node/browser/worker.ts"
   ],
   "exclude": [

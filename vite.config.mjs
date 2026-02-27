@@ -31,9 +31,6 @@ const runtimeFiles = [
   "js9.js",
   "js9worker.js",
   "js9PostMessage.js",
-  "js9Msg.js",
-  "js9Helper.js",
-  "js9Regions.js",
   "js9support.txt"
 ];
 

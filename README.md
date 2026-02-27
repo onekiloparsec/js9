@@ -27,10 +27,8 @@ What does it do?
   - colormaps, scaling, pan, zoom, binning, blending, print, export ...
   - region support: create, manipulate, import, export, ...
   - drag and drop images, regions, catalogs
-  - server-side and local analysis using the JS9 public API
-  - control JS9 using scripts from the Linux shell or Python
   - runs on Macs, Linux, Windows, iPads, iPhones, ...
-  - runs as a Desktop app in all modern browsers
+  - browser-only viewer runtime
   - utilizes WebAssembly (FITS processing at near native speed!)
 
 How can I try it out?
@@ -54,12 +52,10 @@ To install or not to install ...
 --------------------------------
 
 For many users, there is no need to install JS9: simply use the [JS9 web
-site](https://js9.si.edu) to display your data. You can even upload your
-FITS files to the web site and run our server-side analysis.
+site](https://js9.si.edu) to display your data.
 
-Installing JS9 allows you to create your own web pages, tailor site
-parameters, and add your own local and server-based analysis tasks. Grab the
-latest version from [JS9 on GitHub](https://github.com/ericmandel/js9):
+Installing JS9 allows you to create your own web pages and tailor site
+parameters. Grab the latest version from [JS9 on GitHub](https://github.com/ericmandel/js9):
 
     git clone https://github.com/ericmandel/js9
 
@@ -111,53 +107,9 @@ Review notes for compliance-related behavior changes:
 - `docs/fixi-fits-compliance.md`
 - `docs/fits-adapter-interface.md`
 
-JS9 also references `fixi-js` as a local dev dependency:
+JS9 references `fixi-js` as a local dev dependency:
 
     "@onekiloparsec/fixi-js": "file:../fixi-js"
-
-For more advanced support (web-based support, support for handling large files),
-build the JS9 helper and install JS9 in a web directory:
-
-    # configure location to install the JS9 web files,
-    # where to find cfitsio library and include files,
-    # where to install programs and scripts,
-    # what sort of helper to build:
-    ./configure --with-webdir=[path_to_web_install] \
-                --with-cfitsio=[path_to_cfitsio]    \
-                --prefix=[path_to_prog_install]     \
-                --with-helper=nodejs
-
-    # the usual ...
-    make
-    make install
-
-    # start helper
-    cd path_to_web_install
-    # in the bash shell:
-    node js9Helper.js 1>~/logs/js9node.log 2>&1 &
-    # or, in the tcsh shell:
-    node js9Helper.js >& ~/logs/js9node.log &
-
-What about scripting?
----------------------
-
-The *js9* script allows you to control a JS9 web page from the Linux
-command line using the JS9 Public API (scripting requires installation of
-JS9 and [node.js](https://nodejs.org/)):
-
-    js9 Load chandra.fits '{"scale":"log","colormap":"red","contrast":5.78,"bias":0.15}'
-    js9 Load spitzer.fits '{"scale":"log","colormap":"blue","contrast":6.3,"bias":0.54}'
-    js9 ReprojectData chandra.fits
-
-Python users can install [pyjs9](https://github.com/ericmandel/pyjs9):
-
-    git clone https://github.com/ericmandel/pyjs9
-    ...
-    import pyjs9
-    j = pyjs9.JS9()
-    j.Load('chandra.fits', '{"scale":"log","colormap":"red","contrast":5.78,"bias":0.15}')
-    j.Load('spitzer.fits', '{"scale":"log","colormap":"blue","contrast":6.3,"bias":0.54}')
-    j.ReprojectData('chandra.fits')
 
 What's the license?
 -------------------
