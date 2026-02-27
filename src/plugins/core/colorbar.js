@@ -252,7 +252,7 @@ JS9.Colorbar.init = function(width, height){
         .attr("width", this.width-1)
         .attr("height", this.colorbarHeight)
 	.appendTo(this.colorbarContainer);
-    this.ctx = this.colorbarjq[0].getContext("2d");
+    this.ctx = this.colorbarjq[0].getContext("2d", {willReadFrequently: true});
     // set up for text display?
     if( this.showTicks ){
 	// numeric text and tick marks

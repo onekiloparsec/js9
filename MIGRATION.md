@@ -35,3 +35,10 @@ Generated or distribution artifacts (do not edit directly):
 - Library build: `npm run build:lib`
 - Demo dev: `npm run dev:demo`
 - Demo build: `npm run build:demo`
+- Plugin-inclusive builds: use `JS9_INCLUDE_PLUGINS=1` (or `npm run build:lib:plugins` / `npm run build:demo:plugins`)
+
+## Runtime Manifests
+
+- `manifests/runtime-core.json` defines the core runtime copy surface.
+- `manifests/runtime-plugins.json` defines optional plugin/runtime surfaces.
+- Vite copy targets are manifest-driven to avoid copying whole legacy directories by default.

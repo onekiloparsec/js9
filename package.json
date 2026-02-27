@@ -15,9 +15,12 @@
     "ts:migration:build": "tsc -p tsconfig.pilots.build.json",
     "dev": "npm run dev:demo",
     "dev:demo": "vite --config demo-vue/vite.config.mjs",
+    "dev:demo:plugins": "JS9_INCLUDE_PLUGINS=1 vite --config demo-vue/vite.config.mjs",
     "build": "npm run build:lib && npm run build:demo",
     "build:lib": "vite build",
+    "build:lib:plugins": "JS9_INCLUDE_PLUGINS=1 vite build",
     "build:demo": "vite build --config demo-vue/vite.config.mjs",
+    "build:demo:plugins": "JS9_INCLUDE_PLUGINS=1 vite build --config demo-vue/vite.config.mjs",
     "preview:demo": "vite preview --config demo-vue/vite.config.mjs",
     "test:vitest": "vitest run --passWithNoTests"
   },

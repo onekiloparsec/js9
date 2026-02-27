@@ -1,0 +1,8 @@
+{
+  "copy": [
+    { "src": "src/plugins/**/*", "dest": "plugins" },
+    { "src": "src/analysis-plugins/**/*", "dest": "analysis-plugins" },
+    { "src": "src/analysis-wrappers/**/*", "dest": "analysis-wrappers" },
+    { "src": "src/params/**/*", "dest": "params" }
+  ]
+}

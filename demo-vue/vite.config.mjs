@@ -1,46 +1,39 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
-const runtimeDirs = [
-  "runtime",
-  "analysis-plugins",
-  "analysis-wrappers",
-  "css",
-  "images",
-  "js",
-  "node_modules/@onekiloparsec/fixi-js/dist",
-  "params",
-  "plugins"
-];
+const coreManifest = JSON.parse(
+  readFileSync(resolve(__dirname, "../manifests/runtime-core.json"), "utf8")
+);
+const pluginManifest = JSON.parse(
+  readFileSync(resolve(__dirname, "../manifests/runtime-plugins.json"), "utf8")
+);
 
-const runtimeFiles = [
-  "src/core/basicUtils.js",
-  "src/viewer.js",
-  "src/worker.js"
+const copyEntries = [
+  ...(coreManifest.copy || []),
+  ...(pluginManifest.copy || [])
 ];
 
 export default defineConfig({
   root: __dirname,
+  server: {
+    port: 5177
+  },
   plugins: [
     vue(),
     viteStaticCopy({
-      targets: [
-        ...runtimeDirs.map((dir) => ({ src: resolve(__dirname, `../${dir}/**/*`), dest: dir })),
-        ...runtimeFiles.map((file) => ({
-          src: resolve(__dirname, `../${file}`),
-          dest: "runtime",
-          rename:
-            file === "src/worker.js"
-              ? "worker.js"
-              : file === "src/viewer.js"
-                ? "viewer.js"
-                : file === "src/core/basicUtils.js"
-                  ? "basic-utils.js"
-                : undefined
-        }))
-      ]
+      targets: copyEntries.map((entry) => {
+        const target = {
+          src: resolve(__dirname, `../${entry.src}`),
+          dest: entry.dest
+        };
+        if (entry.rename) {
+          target.rename = entry.rename;
+        }
+        return target;
+      })
     })
   ],
   build: {
