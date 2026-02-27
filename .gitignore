@@ -33,4 +33,5 @@ a.out.dSYM
 /talks
 node_modules/
 dist-vite/
+dist/
 coverage/

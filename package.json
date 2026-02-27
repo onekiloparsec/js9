@@ -2,13 +2,23 @@
   "name": "js9",
   "version": "3.9.0",
   "description": "astronomical image display everywhere",
-  "main": "js9.js",
+  "main": "dist/library/js9.umd.js",
+  "module": "dist/library/js9.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/library/js9.es.js",
+      "require": "./dist/library/js9.umd.js"
+    }
+  },
   "scripts": {
     "ts:migration:check": "tsc -p tsconfig.migration.json",
     "ts:migration:build": "tsc -p tsconfig.pilots.build.json",
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "npm run dev:demo",
+    "dev:demo": "vite --config demo-vue/vite.config.mjs",
+    "build": "npm run build:lib && npm run build:demo",
+    "build:lib": "vite build",
+    "build:demo": "vite build --config demo-vue/vite.config.mjs",
+    "preview:demo": "vite preview --config demo-vue/vite.config.mjs",
     "test:vitest": "vitest run --passWithNoTests"
   },
   "repository": {
@@ -28,11 +38,13 @@
   "homepage": "https://js9.si.edu",
   "dependencies": {},
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
     "@onekiloparsec/fixi-js": "file:../fixi-js",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-static-copy": "^3.2.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "vue": "^3.5.21"
   }
 }

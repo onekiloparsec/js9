@@ -1,14 +1,6 @@
-**1 July 2022: my software career has come to an end and with it ends active development of JS9. Please plan accordingly. Eric**
-
-**31 December 2024: release v3.9 fixes a security vulnerability (see [issue #100](https://github.com/ericmandel/js9/issues/100)) and puts JS9 into a stable state for archiving. Please consider carefully the wisdom of using a Web-based package that has no maintainer.**
-
 [![DOI](https://zenodo.org/badge/24642171.svg)](https://doi.org/10.5281/zenodo.596052)
 
-[![DeepScan grade](https://deepscan.io/api/teams/12940/projects/15985/branches/329797/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=12940&pid=15985&bid=329797)
-
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/espadrine.svg?style=social&label=Follow%20%40astrosoftware)](https://twitter.com/astrosoftware)
-
-JS9: astronomical image display everywhere
+JS9 (reborn): astronomical image display everywhere
 ==========================================
 
 ![JS9](images/js9Readme.png)
@@ -59,26 +51,28 @@ parameters. Grab the latest version from [JS9 on GitHub](https://github.com/eric
 
     git clone https://github.com/ericmandel/js9
 
-Load a local page into your browser:
-
-    file:///path/to/js9/js9.html
-
-(NB: Chrome needs to run with the --allow-file-access-from-files switch to use
-the file URI.)
-
-For browser-first development and packaging with Vite:
+For Vite-based development:
 
     npm install
     npm run dev
 
 Then open:
 
-    http://localhost:5173/js9.html
+    http://localhost:5173
 
-Build a packaged static output:
+Build artifacts:
 
-    npm run build
-    npm run preview
+    npm run build:lib   # Vite library output in dist/library
+    npm run build:demo  # Vue demo output in dist/demo
+
+Canonical source locations:
+
+    src
+    demo-vue
+
+Legacy non-module runtime assets are stored under:
+
+    runtime
 
 ## FITS/XISF Extraction Boundary (`fixi-js`)
 
@@ -140,7 +134,7 @@ What's the recent release history?
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4252893.svg)](https://doi.org/10.5281/zenodo.4252893) __v3.2.0__ &nbsp; (11/06/2020)
 
-Who's responsible?
+Historical Developers
 ------------------
 
 Eric Mandel, Alexey Vikhlinin

@@ -4,7 +4,7 @@
     "noEmit": true
   },
   "include": [
-    "node/browser/worker.ts"
+    "src/worker.ts"
   ],
   "exclude": [
     "node_modules"

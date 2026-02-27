@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
-import { defineConfig } from "vitest/config";
+import vue from "@vitejs/plugin-vue";
+import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
 const runtimeDirs = [
@@ -21,12 +22,14 @@ const runtimeFiles = [
 ];
 
 export default defineConfig({
+  root: __dirname,
   plugins: [
+    vue(),
     viteStaticCopy({
       targets: [
-        ...runtimeDirs.map((dir) => ({ src: `${dir}/**/*`, dest: dir })),
+        ...runtimeDirs.map((dir) => ({ src: resolve(__dirname, `../${dir}/**/*`), dest: dir })),
         ...runtimeFiles.map((file) => ({
-          src: file,
+          src: resolve(__dirname, `../${file}`),
           dest: "runtime",
           rename:
             file === "src/worker.js"
@@ -41,17 +44,7 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: "dist/library",
-    emptyOutDir: true,
-    lib: {
-      entry: resolve(__dirname, "src/lib/index.js"),
-      name: "JS9Library",
-      formats: ["es", "umd"],
-      fileName: (format) => `js9.${format}.js`
-    }
-  },
-  test: {
-    environment: "node",
-    include: ["tests/**/*.test.{js,ts}"]
+    outDir: resolve(__dirname, "../dist/demo"),
+    emptyOutDir: true
   }
 });
