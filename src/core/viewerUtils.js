@@ -1,10 +1,101 @@
 /* JS9 viewer utilities extracted from viewer.js. */
 
-/*global $, sprintf, tinycolor, CanvasRenderingContext2D */
+/*global sprintf, tinycolor, CanvasRenderingContext2D */
 
 "use strict";
 
 function JS9InstallViewerUtils(JS9){
+    const resolveViewerElement = (value) => {
+        if( !value ){
+            return null;
+        }
+        if( value.nodeType ){
+            return value;
+        }
+        if( JS9.isWrappedCollection(value) || Array.isArray(value) ){
+            return value[0] || null;
+        }
+        if( typeof value.get === "function" ){
+            return value.get(0) || null;
+        }
+        if( value[0] && value[0].nodeType ){
+            return value[0];
+        }
+        return null;
+    };
+    const setDisplayState = (el, display) => {
+        if( el ){
+            el.style.display = display;
+        }
+    };
+    const toggleButtonState = (button, enabled) => {
+        if( !button ){
+            return;
+        }
+        button.classList.toggle("JS9SearchButton-true", !!enabled);
+        button.classList.toggle("JS9SearchButton-false", !enabled);
+    };
+    const runMarkAction = (text, action, value, opts) => {
+        const textel = resolveViewerElement(text);
+        const done = opts && opts.done;
+        const args = [];
+        if( value !== undefined ){
+            args.push(value);
+        }
+        if( opts !== undefined ){
+            args.push(opts);
+        }
+        if( text && typeof text[action] === "function" ){
+            return text[action](...args);
+        }
+        if( textel && typeof textel[action] === "function" ){
+            return textel[action](...args);
+        }
+        if( textel || text ){
+            const wrapped = JS9.wrapCollection(textel || text);
+            if( wrapped && typeof wrapped[action] === "function" ){
+                return wrapped[action](...args);
+            }
+        }
+        if( typeof done === "function" ){
+            done();
+        }
+        return undefined;
+    };
+    const setTooltipHtml = (target, html) => {
+        const el = resolveViewerElement(target);
+        if( el ){
+            el.innerHTML = html;
+        }
+        return el;
+    };
+    const getTooltipSize = (target) => {
+        const el = resolveViewerElement(target);
+        if( !el ){
+            return {width: 0, height: 0};
+        }
+        const rect = typeof el.getBoundingClientRect === "function" ?
+            el.getBoundingClientRect() :
+            {width: el.offsetWidth || 0, height: el.offsetHeight || 0};
+        return {
+            width: rect.width || el.offsetWidth || 0,
+            height: rect.height || el.offsetHeight || 0
+        };
+    };
+    const setTooltipStyles = (target, styles) => {
+        const el = resolveViewerElement(target);
+        if( !el ){
+            return null;
+        }
+        Object.keys(styles).forEach((key) => {
+            const value = styles[key];
+            el.style[key] = typeof value === "number" && key !== "zIndex" ?
+                `${value}px` :
+                String(value);
+        });
+        return el;
+    };
+
     // was last parsed string in units of hours/min/sec (using specified wcssys)?
     JS9.isHMS = function(wcssys, dtype){
         dtype = dtype || String.fromCharCode(JS9.saodtype());
@@ -352,20 +443,21 @@ function JS9InstallViewerUtils(JS9){
         let div, text, bar;
         let srch, next, prev, close;
         let matchcase, matchdiacritics, matchwords, matchwildcards;
-        const jel = $(el);
+        const root = resolveViewerElement(el);
         const currentClass = "current";
         const offsetTop = 50;
+        const getMarks = () => Array.from(text.querySelectorAll("mark"));
         const search = (value) => {
     	let searchVal = value;
-    	text.unmark({
+    	runMarkAction(text, "unmark", undefined, {
     	    done: () => {
-    		text.mark(searchVal, {
+    		runMarkAction(text, "mark", searchVal, {
     		    caseSensitive: bar.opts.matchcase,
     		    diacritics: bar.opts.diacritics,
     		    accuracy: bar.opts.matchwords ? "exactly" : "partially",
     		    wildcards: bar.opts.matchwildcards ? "enabled" : "disabled",
     		    done: () => {
-    			bar.results = text.find("mark");
+    			bar.results = getMarks();
     			bar.currentIndex = 0;
     			jumpTo();
     		    }
@@ -374,57 +466,56 @@ function JS9InstallViewerUtils(JS9){
     	});
         };
         const btnColor = (which) => {
-    	const s = which.prop("data-btn");
-    	if( bar.opts[s] ){
-    	    which.removeClass("JS9SearchButton-false");
-    	    which.addClass("JS9SearchButton-true");
-    	} else {
-    	    which.removeClass("JS9SearchButton-true");
-    	    which.addClass("JS9SearchButton-false");
-    	}
+    	const s = which.dataset.btn;
+    	toggleButtonState(which, bar.opts[s]);
         };
         const jumpTo = () => {
     	let cur, pos;
     	if( bar.results.length ){
-    	    cur = bar.results.eq(bar.currentIndex);
-    	    bar.results.removeClass(currentClass);
-    	    if( cur.length ){
-    		cur.addClass(currentClass);
-    		pos = cur.position().top;
-    		if( pos < 0 || pos > div.height() ){
-    		    pos = pos + div.scrollTop() - offsetTop;
-                        div.scrollTop(pos);
+    	    cur = bar.results[bar.currentIndex];
+    	    bar.results.forEach((mark) => {
+    		mark.classList.remove(currentClass);
+    	    });
+    	    if( cur ){
+    		pos = cur.getBoundingClientRect().top -
+    		    div.getBoundingClientRect().top;
+    		cur.classList.add(currentClass);
+    		if( pos < 0 || pos > div.clientHeight ){
+    		    div.scrollTop = pos + div.scrollTop - offsetTop;
     		}
     	    }
     	}
         };
         textid = textid || ".JS9AnalysisText";
+        if( !root ){
+    	return;
+        }
         // make sure we have text
-        if( jel.is(textid) ){
-    	text = jel;
+        if( root.matches && root.matches(textid) ){
+    	text = root;
         } else {
-    	text = jel.find(textid);
-    	if( !text.length ){
+    	text = root.querySelector(textid);
+    	if( !text ){
     	    return;
     	}
         }
         // light window or div?
-        div = jel.find(JS9.lightOpts[JS9.LIGHTWIN].drag);
-        if( !div.length ){
+        div = root.querySelector(JS9.lightOpts[JS9.LIGHTWIN].drag);
+        if( !div ){
     	// just a div
-    	div = jel;
+    	div = root;
         }
         // does the searchbar already exist?
-        bar = div.find(".JS9Searchbar");
-        if( bar.length ){
+        bar = div.querySelector(".JS9Searchbar");
+        if( bar ){
     	// make it visiable and return
-    	bar.css("display", "block");
+    	setDisplayState(bar, "block");
     	return;
         }
         // make a new searchbar
-        bar = $("<div>")
-    	.addClass("JS9Searchbar")
-    	.appendTo(div);
+        bar = document.createElement("div");
+        bar.className = "JS9Searchbar";
+        div.appendChild(bar);
         // add options
         bar.opts = {
     	matchcase: false,
@@ -432,36 +523,40 @@ function JS9InstallViewerUtils(JS9){
     	matchwords: false,
     	matchwildcards: false,
         };
+        bar.results = [];
+        bar.currentIndex = 0;
         // search text box
-        srch = $("<input type='search'>")
-    	.addClass("JS9SearchInput")
-    	.appendTo(bar);
+        srch = document.createElement("input");
+        srch.type = "search";
+        srch.className = "JS9SearchInput";
+        bar.appendChild(srch);
         // event fires with each keystroke
-        srch.on("input", () => {
-    	search(srch.val());
+        srch.addEventListener("input", () => {
+    	search(srch.value);
         });
         // placeholder hints
         if( bar.opts.matchwildcards ){
-    	srch.prop("placeholder", "sea*rch template?");
+    	srch.placeholder = "sea*rch template?";
         } else {
-    	srch.prop("placeholder", "search term(s)");
+    	srch.placeholder = "search term(s)";
         }
         // find next occurence
-        next = $("<button>")
-    	.addClass("JS9SearchButton")
-    	.prop("data-btn", "next")
-    	.html("&darr;")
-    	.appendTo(bar);
+        next = document.createElement("button");
+        next.className = "JS9SearchButton";
+        next.dataset.btn = "next";
+        next.innerHTML = "&darr;";
+        bar.appendChild(next);
         // find previous occurence
-        prev = $("<button>")
-    	.addClass("JS9SearchButton")
-    	.prop("data-btn", "prev")
-    	.html("&uarr;")
-    	.appendTo(bar);
+        prev = document.createElement("button");
+        prev.className = "JS9SearchButton";
+        prev.dataset.btn = "prev";
+        prev.innerHTML = "&uarr;";
+        bar.appendChild(prev);
         // event callback for next and prev
-        next.add(prev).on("click", (e) => {
+        [next, prev].forEach((button) => {
+    	button.addEventListener("click", (e) => {
     	if( bar.results && bar.results.length) {
-    	    bar.currentIndex += $(e.currentTarget).is(prev) ? -1 : 1;
+    	    bar.currentIndex += e.currentTarget === prev ? -1 : 1;
     	    if( bar.currentIndex < 0 ){
     		bar.currentIndex = bar.results.length - 1;
     	    }
@@ -470,83 +565,88 @@ function JS9InstallViewerUtils(JS9){
     	    }
     	    jumpTo();
     	}
+    	});
         });
-        matchcase = $("<button>")
-    	.addClass(`JS9SearchButton JS9SearchButton-${bar.opts.matchcase}`)
-    	.prop("data-btn", "matchcase")
-    	.html("Match Case")
-    	.appendTo(bar);
-        matchcase.on("click", () => {
+        matchcase = document.createElement("button");
+        matchcase.className =
+    	`JS9SearchButton JS9SearchButton-${bar.opts.matchcase}`;
+        matchcase.dataset.btn = "matchcase";
+        matchcase.innerHTML = "Match Case";
+        bar.appendChild(matchcase);
+        matchcase.addEventListener("click", () => {
     	bar.opts.matchcase = !bar.opts.matchcase;
     	btnColor(matchcase);
-    	search(srch.val());
+    	search(srch.value);
         });
         btnColor(matchcase);
-        matchdiacritics = $("<button>")
-    	.addClass(`JS9SearchButton JS9SearchButton-${bar.opts.matchdiacritics}`)
-    	.prop("data-btn", "matchdiacritics")
-    	.html("Match Diacritics")
-    	.appendTo(bar);
-        matchdiacritics.on("click", () => {
+        matchdiacritics = document.createElement("button");
+        matchdiacritics.className =
+    	`JS9SearchButton JS9SearchButton-${bar.opts.matchdiacritics}`;
+        matchdiacritics.dataset.btn = "matchdiacritics";
+        matchdiacritics.innerHTML = "Match Diacritics";
+        bar.appendChild(matchdiacritics);
+        matchdiacritics.addEventListener("click", () => {
     	bar.opts.matchdiacritics = !bar.opts.matchdiacritics;
     	btnColor(matchdiacritics);
-    	search(srch.val());
+    	search(srch.value);
         });
         btnColor(matchdiacritics);
-        matchwords = $("<button>")
-    	.addClass(`JS9SearchButton JS9SearchButton-${bar.opts.matchwords}`)
-    	.prop("data-btn", "matchwords")
-    	.html("Whole Words")
-    	.appendTo(bar);
-        matchwords.on("click", () => {
+        matchwords = document.createElement("button");
+        matchwords.className =
+    	`JS9SearchButton JS9SearchButton-${bar.opts.matchwords}`;
+        matchwords.dataset.btn = "matchwords";
+        matchwords.innerHTML = "Whole Words";
+        bar.appendChild(matchwords);
+        matchwords.addEventListener("click", () => {
     	bar.opts.matchwords = !bar.opts.matchwords;
     	btnColor(matchwords);
-    	search(srch.val());
+    	search(srch.value);
         });
         btnColor(matchwords);
-        matchwildcards = $("<button>")
-    	.addClass(`JS9SearchButton JS9SearchButton-${bar.opts.matchwildcards}`)
-    	.prop("data-btn", "matchwildcards")
-    	.html("Wildcards")
-    	.appendTo(bar);
-        matchwildcards.on("click", () => {
+        matchwildcards = document.createElement("button");
+        matchwildcards.className =
+    	`JS9SearchButton JS9SearchButton-${bar.opts.matchwildcards}`;
+        matchwildcards.dataset.btn = "matchwildcards";
+        matchwildcards.innerHTML = "Wildcards";
+        bar.appendChild(matchwildcards);
+        matchwildcards.addEventListener("click", () => {
     	bar.opts.matchwildcards = !bar.opts.matchwildcards;
     	if( bar.opts.matchwildcards ){
-    	    srch.prop("placeholder", "sea*rch template?");
+    	    srch.placeholder = "sea*rch template?";
     	} else {
-    	    srch.prop("placeholder", "search term(s)");
+    	    srch.placeholder = "search term(s)";
     	}
     	btnColor(matchwildcards);
-    	search(srch.val());
+    	search(srch.value);
         });
         btnColor(matchwildcards);
         // close the searchbar
-        close = $("<button>")
-    	.addClass("JS9SearchButton")
-    	.prop("data-btn", "close")
-    	.html("Close")
-    	.appendTo(bar);
-        close.on("click", () => {
-    	text.unmark();
-    	srch.val("");
-    	bar.css("display", "none");
+        close = document.createElement("button");
+        close.className = "JS9SearchButton";
+        close.dataset.btn = "close";
+        close.innerHTML = "Close";
+        bar.appendChild(close);
+        close.addEventListener("click", () => {
+    	runMarkAction(text, "unmark");
+    	srch.value = "";
+    	setDisplayState(bar, "none");
         });
         // no outline on focus
-        div.css("outline", "none");
+        div.style.outline = "none";
         // set tabindex so we can sense keyboard events
-        div.attr("tabindex", "0");
+        div.setAttribute("tabindex", "0");
         // meta-k will bring up the searchbar
-        div.on("keydown", (evt) => {
+        div.addEventListener("keydown", (evt) => {
     	const code = evt.which || evt.keyCode;
     	const c = String.fromCharCode(code);
     	if( JS9.specialKey(evt) && c === "F" ){
-    	    if( bar.css("display") === "none" ){
-    		bar.css("display", "block");
+    	    if( window.getComputedStyle(bar).display === "none" ){
+    		setDisplayState(bar, "block");
     		srch.focus();
     	    } else {
-    		text.unmark();
-    		srch.val("");
-    		bar.css("display", "none");
+    		runMarkAction(text, "unmark");
+    		srch.value = "";
+    		setDisplayState(bar, "none");
     	    }
     	}
         });
@@ -594,16 +694,20 @@ function JS9InstallViewerUtils(JS9){
         };
         if( fmt ){
     	tipstr = fmt2str(fmt);
-    	im.display.tooltip.html(tipstr);
+    	setTooltipHtml(im.display.tooltip, tipstr);
     	// get size of div ...
-    	w = im.display.tooltip.width();
-    	h = im.display.tooltip.height();
+    	({width: w, height: h} = getTooltipSize(im.display.tooltip));
     	// ... so we can place the tooltip properly
     	tx = Math.max(2, Math.min(x, im.display.width - (w + 10)));
     	ty = Math.max(2, Math.min(y, im.display.height - (h + 10)));
-    	im.display.tooltip.css({left:tx, top:ty, display: "inline-block"});
+    	setTooltipStyles(im.display.tooltip, {
+    	    left: tx,
+    	    top: ty,
+    	    display: "inline-block"
+    	});
         } else {
-    	im.display.tooltip.html("").css({left: -9999, display: "none"});
+    	setTooltipHtml(im.display.tooltip, "");
+    	setTooltipStyles(im.display.tooltip, {left: -9999, display: "none"});
         }
     };
     

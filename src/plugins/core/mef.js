@@ -2,9 +2,13 @@
  * Multi-Extension FITS module (March 31, 2016)
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
+
+const mefWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Mef = {};
@@ -49,13 +53,15 @@ JS9.Mef.activeExtension = function(im, i){
     let clas, classbase;
     if( im ){
 	classbase = `${im.display.id}_${JS9.Mef.BASE}`;
-	$(`.${classbase  }Extension`)
-	    .removeClass(`${JS9.Mef.BASE}ExtensionActive`)
-	    .addClass(`${JS9.Mef.BASE}ExtensionInactive`);
+        document.querySelectorAll(`.${classbase}Extension`).forEach((node) => {
+            node.classList.remove(`${JS9.Mef.BASE}ExtensionActive`);
+            node.classList.add(`${JS9.Mef.BASE}ExtensionInactive`);
+        });
 	clas = JS9.Mef.imid(im, i, true);
-	$(`.${clas}` )
-	    .removeClass(`${JS9.Mef.BASE}ExtensionInactive`)
-	    .addClass(`${JS9.Mef.BASE}ExtensionActive`);
+        document.querySelectorAll(`.${clas}`).forEach((node) => {
+            node.classList.remove(`${JS9.Mef.BASE}ExtensionInactive`);
+            node.classList.add(`${JS9.Mef.BASE}ExtensionActive`);
+        });
     }
 };
 
@@ -111,10 +117,10 @@ JS9.Mef.init = function(opts){
 	id = JS9.Mef.imid(im, k);
 	clas = JS9.Mef.imid(im, k, true);
 	classbase = `${im.display.id}_${JS9.Mef.BASE}`;
-	div = $("<div>")
+	div = mefWrap(document.createElement("div"))
 	    .addClass(clas)
-	    .addClass(`${classbase   }Extension`)
-	    .addClass(`${JS9.Mef.BASE   }Extension`)
+	    .addClass(`${classbase}Extension`)
+	    .addClass(`${JS9.Mef.BASE}Extension`)
 	    .addClass(`${JS9.Mef.BASE}ExtensionInactive`)
 	    .attr("id", id)
 	    .html(htmlString)
@@ -128,7 +134,7 @@ JS9.Mef.init = function(opts){
     };
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -140,7 +146,7 @@ JS9.Mef.init = function(opts){
     // clean main container
     this.divjq.html("");
     // add mef container to main
-    this.mefContainer = $("<div>")
+    this.mefContainer = mefWrap(document.createElement("div"))
 	.addClass(`${JS9.Mef.BASE}Container`)
 	.attr("id", `${this.id}MefContainer`)
 	.appendTo(this.divjq);
@@ -170,7 +176,10 @@ JS9.Mef.init = function(opts){
 	s = JS9.hdus2Str([obj]).trim();
 	addExt(obj, s, i);
     }
-    $(`#${sid}`).prop("checked", this.separate);
+    const separateInput = document.getElementById(sid);
+    if( separateInput ){
+        separateInput.checked = this.separate;
+    }
     // make the currently displayed extension active
     if( im.raw.hdu.fits.extnum !== undefined ){
 	JS9.Mef.activeExtension(im, im.raw.hdu.fits.extnum);
@@ -188,4 +197,3 @@ JS9.RegisterPlugin(JS9.Mef.CLASS, JS9.Mef.NAME, JS9.Mef.init,
 		    winTitle: "Multi-Extension FITS",
 		    winResize: true,
 		    winDims: [JS9.Mef.WIDTH, JS9.Mef.HEIGHT]});
-

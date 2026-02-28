@@ -412,7 +412,7 @@ function JS9InstallViewerEvents(JS9){
     
     JS9.dragdropCB = function(id, evt){
         let i, s, opts, files, display;
-        // convert jquery event to original event, if possible
+        // convert wrapped event to original event, if possible
         if( evt.originalEvent ){
     	evt = evt.originalEvent;
         }

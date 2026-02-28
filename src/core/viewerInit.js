@@ -1,12 +1,37 @@
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
 
-/*global $, JS9Prefs, JS9Inline, fabric, dhtmlwindow, Jupyter, Plotly, ImageFilters, parent */
+/*global JS9Prefs, JS9Inline, fabric, dhtmlwindow, Jupyter, Plotly, ImageFilters, parent */
 
 "use strict";
 
 function JS9InstallViewerInit(JS9){
 JS9.init = function(){
     let uopts, url, ufile, dopts, key, arr;
+    const watchForInputs = (root, callback) => {
+	if( !root || typeof MutationObserver === "undefined" ){
+	    return;
+	}
+	root.querySelectorAll("input").forEach((input) => {
+	    callback(input);
+	});
+	(new MutationObserver((mutations) => {
+	    mutations.forEach((mutation) => {
+		mutation.addedNodes.forEach((node) => {
+		    if( !node || node.nodeType !== 1 ){
+			return;
+		    }
+		    if( node.matches && node.matches("input") ){
+			callback(node);
+		    }
+		    if( node.querySelectorAll ){
+			node.querySelectorAll("input").forEach((input) => {
+			    callback(input);
+			});
+		    }
+		});
+	    });
+	})).observe(root, {childList: true, subtree: true});
+    };
     // sanity check: need HTML5 canvas and JSON
     if( !window.HTMLCanvasElement || !JSON ){
 	JS9.error("your browser does not support JS9 (no HTML5 canvas and/or JSON). Please try a modern version of Firefox, Chrome, Safari, Opera, or Edge.");
@@ -24,18 +49,18 @@ JS9.init = function(){
     }
     if( !JS9.INSTALLDIR ){
 	try{
-		    // process all links which end in 'viewer.css' or legacy 'js9.css'
-		    $('link[href$="viewer.css"], link[href$="js9.css"]').each((index, element) => {
-			const h = $(element).attr("href");
-			if( h ){
-			    // must really end in a recognized viewer stylesheet name
-			    if( h.split("/").reverse()[0] === "js9.css" ||
-				h.split("/").reverse()[0] === "viewer.css" ){
-				// set install dir to its directory
-				JS9.INSTALLDIR = h.replace(/(js9|viewer)\.css$/, "");
-			    }
-			}
-		    });
+	    // process all links which end in 'viewer.css' or legacy 'js9.css'
+	    document.querySelectorAll('link[href$="viewer.css"], link[href$="js9.css"]').forEach((element) => {
+		const h = element.getAttribute("href");
+		if( h ){
+		    // must really end in a recognized viewer stylesheet name
+		    if( h.split("/").reverse()[0] === "js9.css" ||
+			h.split("/").reverse()[0] === "viewer.css" ){
+			// set install dir to its directory
+			JS9.INSTALLDIR = h.replace(/(js9|viewer)\.css$/, "");
+		    }
+		}
+	    });
 	} catch(e){
 	    JS9.INSTALLDIR = "";
 	}
@@ -57,12 +82,17 @@ JS9.init = function(){
     if( JS9.LIGHTWIN === "dhtml" ){
 	// Creation of dhtmlwindowholder was done by a document.write in
 	// dhtmlwindow.js. We removed it from dhtmlwindow.js file because it
-		// interfered with the jquery search for viewer.css above. Oh boy ...
+		// interfered with the older viewer.css lookup above. Oh boy ...
 	// But it has to be somewhere!
-	$("<div>")
-	    .attr("id", "dhtmlwindowholder")
-	    .appendTo($(document.body))
-	    .append("<span style='display:none'>.</span>");
+	if( !document.getElementById("dhtmlwindowholder") ){
+	    const holder = document.createElement("div");
+	    const span = document.createElement("span");
+	    holder.id = "dhtmlwindowholder";
+	    span.style.display = "none";
+	    span.textContent = ".";
+	    holder.appendChild(span);
+	    document.body.appendChild(holder);
+	}
 	// allow in-line specification of images for all-in-one configuration
 	if( JS9.inline ){
 	    dhtmlwindow.imagefiles = [JS9.inline["images/min.gif"],
@@ -82,10 +112,12 @@ JS9.init = function(){
 	}
 	// once a window is loaded, set jupyter focus, if necessary
 	if( {}.hasOwnProperty.call(window, "Jupyter") ){
-	   $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-		.arrive("input", (el) => {
-		    JS9.jupyterFocus($(el).parent());
-		});
+	    watchForInputs(document.querySelector(JS9.lightOpts[JS9.LIGHTWIN].topid),
+			   (el) => {
+			       if( el.parentElement ){
+				   JS9.jupyterFocus(el.parentElement);
+			       }
+			   });
 	}
     }
     // use plotly if loaded separately, otherwise use internal flot
@@ -238,8 +270,8 @@ JS9.init = function(){
     // set debug flag
     JS9.DEBUG = JS9.DEBUG || JS9.globalOpts.debug || 0;
     // init main display(s)
-    $("div.JS9").each((index, element) => {
-	JS9.checkNew(new JS9.Display($(element)));
+    document.querySelectorAll("div.JS9").forEach((element) => {
+	JS9.checkNew(new JS9.Display(element));
     });
     // load web worker
     if( window.Worker && !JS9.allinone){

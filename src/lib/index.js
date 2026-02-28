@@ -1,15 +1,6 @@
 const DEFAULT_STYLES = ["support.css", "viewer.css"];
+const PLUGIN_SUPPORT_SCRIPTS = [];
 const SUPPORT_SOURCE_SCRIPTS = [
-  "js/winmod.js",
-  "js/jquery.min.js",
-  "js/jquery-ui.min.js",
-  "js/jquery.contextMenu.min.js",
-  "js/jquery.flot.min.js",
-  "js/jquery.flot.errorbars.min.js",
-  "js/jquery.flot.navigate.min.js",
-  "js/jquery.flot.resize.min.js",
-  "js/jquery.flot.selection.min.js",
-  "js/flot-zoom.min.js",
   "js/sprintf.min.js",
   "js/dhtmlwindow.min.js",
   "js/dhtmlwindow_blurb.js",
@@ -18,21 +9,14 @@ const SUPPORT_SOURCE_SCRIPTS = [
   "js/FileSaver.min.js",
   "js/canvas-toBlob.js",
   "js/tabcontent.js",
-  "js/arrive.min.js",
-  "js/jquery.doubletap.min.js",
-  "js/jquery.flot.axislabels.js",
   "js/spin.js",
-  "js/ElementQueries.js",
   "js/ResizeSensor.js",
   "js/gaussblur.js",
   "js/imagefilters.js",
-  "js/jquery.ui.touch-punch.js",
   "js/js9inline.js",
-  "js/spectrum.min.js",
   "js/tinycolor.min.js",
-  "js/jquery.mark.es6.min.js",
-  "js/jquery.caret.min.js",
   "js/regSelect.js",
+  "runtime/dom-adapter.js",
   "runtime/math-utils.js",
   "runtime/basic-utils.js",
   "runtime/fits-runtime.js",
@@ -254,6 +238,7 @@ export async function loadJS9Runtime(options = {}) {
 
   const runtimeStyles = styles.map((href) => resolveAssetPath(runtimePath, href));
   const runtimeScripts = [
+    ...(includePlugins ? PLUGIN_SUPPORT_SCRIPTS : []),
     ...scripts,
     ...(includePlugins ? pluginScripts : [])
   ].map((src) => resolveAssetPath(runtimePath, src));

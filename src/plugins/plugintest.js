@@ -35,7 +35,7 @@ PLUGIN.init = function(){
     var i;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)

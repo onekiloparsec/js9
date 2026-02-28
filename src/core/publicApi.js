@@ -645,6 +645,42 @@ JS9.mkPublic("LoadWindow", function(...args){
     let file, opts, type, html, winopts;
     const lopts = JS9.lightOpts[JS9.LIGHTWIN];
     const obj = JS9.parsePublicArgs(args);
+    const byId = function(value){
+	return document.getElementById(value);
+    };
+    const resolveNode = function(value){
+	if( !value ){
+	    return null;
+	}
+	if( JS9.isWrappedCollection(value) ){
+	    return value[0];
+	}
+	if( typeof value === "string" ){
+	    return value.charAt(0) === "#" ?
+		document.querySelector(value) :
+		document.getElementById(value);
+	}
+	return value;
+    };
+    const onElementAvailable = function(rootSelector, selector, callback){
+	let target;
+	const root = document.querySelector(rootSelector);
+	if( !root || typeof MutationObserver === "undefined" ){
+	    return;
+	}
+	target = root.querySelector(selector);
+	if( target ){
+	    callback(target);
+	    return;
+	}
+	(new MutationObserver((mutations, observer) => {
+	    target = root.querySelector(selector);
+	    if( target ){
+		observer.disconnect();
+		callback(target);
+	    }
+	})).observe(root, {childList: true, subtree: true});
+    };
     const removeDisplay = (display) => {
 	// remove from display list
 	const idx = JS9.inArray(display, JS9.displays);
@@ -665,7 +701,7 @@ JS9.mkPublic("LoadWindow", function(...args){
         html = "<hr class='hline0'>";
 	// menubar
 	if( !display                                        ||
-	    ($(`#${opts.clone}Menubar`).length > 0          &&
+	    (byId(`${opts.clone}Menubar`)                   &&
 	     !display.pluginInstances.JS9Menubar.isDynamic) ){
 	    html += `<div class='JS9Menubar' id='${id}Menubar'></div>`;
 	} else if( winopts ){
@@ -675,8 +711,8 @@ JS9.mkPublic("LoadWindow", function(...args){
 	html += `<div class='JS9' id='${id}'></div>`;
 	// colorbar
 	if( !display                                         ||
-	    ($(`#${opts.clone}Colorbar`).length > 0          &&
-	     $(`#${opts.clone}Statusbar`).length ===0        &&
+	    (byId(`${opts.clone}Colorbar`)                   &&
+	     !byId(`${opts.clone}Statusbar`)                 &&
 	     !display.pluginInstances.JS9Colorbar.isDynamic) ){
 	    if( display && display.pluginInstances.JS9Colorbar ){
 		s = `data-showTicks='${display.pluginInstances.JS9Colorbar.showTicks}'`;
@@ -692,7 +728,7 @@ JS9.mkPublic("LoadWindow", function(...args){
 	    wheight -= 44;
 	}
 	if( !display                                         ||
-	    ($(`#${opts.clone}Statusbar`).length > 0         &&
+	    (byId(`${opts.clone}Statusbar`)                  &&
 	     !display.pluginInstances.JS9Statusbar.isDynamic) ){
 	    html += `<div class='JS9Statusbar' id='${id}Statusbar'></div>`;
 	} else if( winopts ){
@@ -793,24 +829,31 @@ JS9.mkPublic("LoadWindow", function(...args){
 		wtype = "ajax";
 		wurl = JS9.InstallDir(JS9.lightOpts.lcloseURL);
 	    }
-	    $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-		.arrive("#lightWinCloseForm", {onceOnly: true}, () => {
-		    let i, el;
-		    // on arrival, add JS9 displays to 'move' part of form
-		    el = $("#lightWinCloseForm").find("#lightWinCloseSel");
-		    for(i=0; i<JS9.displays.length; i++){
-			if( JS9.displays[i].id !== id ){
-			    el.append($("<option>", {
-				value: JS9.displays[i].id,
-				text:  JS9.displays[i].id
-			    }));
-			}
-		    }
-		});
+	    onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+			       "#lightWinCloseForm",
+			       () => {
+				   let i, el, option;
+				   // on arrival, add JS9 displays to 'move' part of form
+				   el = document.getElementById("lightWinCloseSel");
+				   if( !el ){
+				       return;
+				   }
+				   for(i=0; i<JS9.displays.length; i++){
+				       if( JS9.displays[i].id !== id ){
+					   option = document.createElement("option");
+					   option.value = JS9.displays[i].id;
+					   option.textContent = JS9.displays[i].id;
+					   el.appendChild(option);
+				       }
+				   }
+			       });
 	    did = JS9.lightWin(wid, wtype, wurl, "Closing a light window",
 			       lopts.lcloseWin);
-	    $(did).data("dispid", id);
-	    $(did).data("winid", winid);
+	    display = resolveNode(did);
+	    if( display ){
+		display.dataset.dispid = id;
+		display.dataset.winid = winid;
+	    }
 	    return false;
 	}
     };
@@ -1343,8 +1386,9 @@ JS9.mkPublic("CopyFromClipboard", function(){
 JS9.mkPublic("OpenFileMenu", function(...args){
     const obj = JS9.parsePublicArgs(args);
     const display = JS9.lookupDisplay(obj.display);
-    if( display ){
-	$(`#openLocalLoad-${display.id}`).click();
+    const el = display ? document.getElementById(`openLocalLoad-${display.id}`) : null;
+    if( el ){
+	el.click();
     }
 });
 
@@ -1352,8 +1396,9 @@ JS9.mkPublic("OpenFileMenu", function(...args){
 JS9.mkPublic("OpenRegionsMenu", function(...args){
     const obj = JS9.parsePublicArgs(args);
     const display = JS9.lookupDisplay(obj.display);
-    if( display ){
-	$(`#openLocalLoadRegions-${display.id}`).click();
+    const el = display ? document.getElementById(`openLocalLoadRegions-${display.id}`) : null;
+    if( el ){
+	el.click();
     }
 });
 
@@ -1361,8 +1406,9 @@ JS9.mkPublic("OpenRegionsMenu", function(...args){
 JS9.mkPublic("OpenSessionMenu", function(...args){
     const obj = JS9.parsePublicArgs(args);
     const display = JS9.lookupDisplay(obj.display);
-    if( display ){
-	$(`#openLocalLoadSession-${display.id}`).click();
+    const el = display ? document.getElementById(`openLocalLoadSession-${display.id}`) : null;
+    if( el ){
+	el.click();
     }
 });
 
@@ -1370,8 +1416,9 @@ JS9.mkPublic("OpenSessionMenu", function(...args){
 JS9.mkPublic("OpenCatalogsMenu", function(...args){
     const obj = JS9.parsePublicArgs(args);
     const display = JS9.lookupDisplay(obj.display);
-    if( display ){
-	$(`#openLocalLoadCatalog-${display.id}`).click();
+    const el = display ? document.getElementById(`openLocalLoadCatalog-${display.id}`) : null;
+    if( el ){
+	el.click();
     }
 });
 
@@ -1379,8 +1426,9 @@ JS9.mkPublic("OpenCatalogsMenu", function(...args){
 JS9.mkPublic("OpenColormapMenu", function(...args){
     const obj = JS9.parsePublicArgs(args);
     const display = JS9.lookupDisplay(obj.display);
-    if( display ){
-	$(`#openLocalLoadColormap-${display.id}`).click();
+    const el = display ? document.getElementById(`openLocalLoadColormap-${display.id}`) : null;
+    if( el ){
+	el.click();
     }
 });
 
@@ -1616,9 +1664,9 @@ JS9.mkPublic("SubmitAnalysis", function(...args){
     if( aname ){
 	dispid =  JS9.lookupDisplay(obj.display).id;
     } else {
-	topjq = $(el).closest(a.top);
-	aname = topjq.data("aname");
-	dispid = topjq.data("dispid");
+	topjq = el.closest(a.top);
+	aname = topjq ? topjq.dataset.aname : null;
+	dispid = topjq ? topjq.dataset.dispid : null;
     }
     // make sure we have a task name
     if( !aname ){
@@ -1628,12 +1676,18 @@ JS9.mkPublic("SubmitAnalysis", function(...args){
     }
     // make sure we have an image and run the analysis
     if( im ){
-	formjq = $(el).closest("form");
+	formjq = el.closest("form");
 	// make sure unchecked elements are in the array
 	try{
-	    // tobj = $(':input:visible', formjq).serializeArray();
-	    tobj = formjq.serializeArray();
-	    tobj = tobj.concat($(`#${formjq.attr('id')} input[type=checkbox]:not(:checked)`).map(function() {return {'name': this.name, 'value': 'false'};}).get());
+	    tobj = [];
+	    if( formjq ){
+		Array.from(new FormData(formjq).entries()).forEach(([name, value]) => {
+		    tobj.push({name, value});
+		});
+		formjq.querySelectorAll("input[type=checkbox]:not(:checked)").forEach((checkbox) => {
+		    tobj.push({name: checkbox.name, value: "false"});
+		});
+	    }
 	}
 	catch(e){ tobj = null; }
 	im.runAnalysis(aname, tobj, func);
@@ -2056,7 +2110,7 @@ JS9.mkPublic("AddDivs", function(...args){
 	    continue;
 	}
 	// make sure div exists ...
-	if( $(`#${id}`).length === 0 ){
+	if( !document.getElementById(id) ){
 	    if( JS9.DEBUG ){
 		JS9.log("warning: can't find div, skipping AddDivs(): %s", id);
 	    }
@@ -2084,7 +2138,7 @@ JS9.mkPublic("AddDivs", function(...args){
     JS9.instantiatePlugins();
 });
 
-// instantiate plugins when $(document).ready fires before scripts are loaded,
+// instantiate plugins when startup ordering fires before scripts are loaded,
 // e.g., Require.js
 JS9.mkPublic("InstantiatePlugins", function(){
     JS9.instantiatePlugins();

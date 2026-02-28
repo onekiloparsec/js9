@@ -48,7 +48,6 @@
             || ('[object NodeList]' === elementsType)
             || ('[object HTMLCollection]' === elementsType)
             || ('[object Object]' === elementsType)
-            || ('undefined' !== typeof jQuery && elements instanceof jQuery) //jquery
             || ('undefined' !== typeof Elements && elements instanceof Elements) //mootools
         );
         var i = 0, j = elements.length;
@@ -96,7 +95,7 @@
     /**
      * Class for dimension change detection.
      *
-     * @param {Element|Element[]|Elements|jQuery} element
+     * @param {Element|Element[]|Elements} element
      * @param {Function} callback
      *
      * @constructor

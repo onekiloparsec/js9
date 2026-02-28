@@ -1,7 +1,5 @@
 /* JS9 viewer plugin support extracted from viewer.js. */
 
-/*global $ */
-
 "use strict";
 
 function JS9InstallViewerPlugins(JS9){
@@ -9,6 +7,10 @@ function JS9InstallViewerPlugins(JS9){
     // plugin support
     // ---------------------------------------------------------------------
     
+    const toCollection = function(value){
+    	return JS9.wrapCollection(value);
+    };
+
     // add a plugin definition. Plugins will initialized after document is loaded
     JS9.RegisterPlugin = function(xclass, xname, func, opts){
         let name, m, type, url, title;
@@ -66,6 +68,20 @@ function JS9InstallViewerPlugins(JS9){
     JS9.instantiatePlugin = function(el, plugin, winhandle, args){
         let i, tplugin, instance, divid, divjq, pdivjq, html, ndiv, did;
         let visible = "visible";
+        const resolveElement = (value) => {
+    	    if( !value ){
+    		return null;
+    	    }
+    	    if( JS9.isWrappedCollection(value) ){
+    		return value[0];
+    	    }
+    	    if( typeof value === "string" ){
+    		return value.charAt(0) === "#" ?
+    		    document.querySelector(value) :
+    		    document.getElementById(value);
+    	    }
+    	    return value;
+        };
         // if plugin is a string, get plugin object by name
         if( typeof plugin === "string" ){
     	for(i=0; i<JS9.plugins.length; i++){
@@ -104,14 +120,14 @@ function JS9InstallViewerPlugins(JS9){
     	JS9.log("error in %s: %s [%s]\n%s",
     		cbname, this.name, e.message, JS9.strace(e));
         };
-        // save the div as a jquery object
+        // save the div as a wrapped collection
         if( el ){
-    	if( JS9.isJQueryObject(el) ){
+    	if( JS9.isWrappedCollection(el) ){
     	    divjq = el;
     	} else if( typeof el === "object" ){
-    	    divjq = $(el);
+    	    divjq = toCollection(resolveElement(el));
     	} else {
-    	    divjq = $(`#${el}`);
+    	    divjq = toCollection(resolveElement(el));
     	}
     	// if we already have created this instance, we are done
     	for(i=0; i<plugin.instances.length; i++){
@@ -120,7 +136,7 @@ function JS9InstallViewerPlugins(JS9){
     	    }
     	}
         } else {
-    	divjq = $("div");
+    	divjq = toCollection(document.createElement("div"));
         }
         // save returned light id and type ("virtual", "light", "div")
         if( !el ){
@@ -166,8 +182,11 @@ function JS9InstallViewerPlugins(JS9){
     	// add the toolbar to the container, if necessary
     	if( divjq.data("toolbarseparate") !== false ){
     	    if( plugin.opts.toolbarSeparate || divjq.data("toolbarseparate") ){
-    		ndiv = `<div class='${JS9.lightOpts[JS9.LIGHTWIN].dragBar.substr(1)}'>`;
-    		$(ndiv).insertBefore(instance.divjq);
+    		ndiv = document.createElement("div");
+    		ndiv.className = JS9.lightOpts[JS9.LIGHTWIN].dragBar.substr(1);
+    		if( instance.divjq[0] && instance.divjq[0].parentNode ){
+    		    instance.divjq[0].parentNode.insertBefore(ndiv, instance.divjq[0]);
+    		}
     	    }
     	}
         }
@@ -239,17 +258,20 @@ function JS9InstallViewerPlugins(JS9){
     	    }
     	    // add html to toolbar
     	    // add the display id to the toolbar, so buttons can find it
-    	    $(`<div class='JS9PluginToolbar-${instance.winType}'>`)
-    		.css("z-index", JS9.BTNZINDEX)
-    		.html(html)
-    		.data("displayid", did)
-    		.insertAfter(pdivjq);
+    	    ndiv = document.createElement("div");
+    	    ndiv.className = `JS9PluginToolbar-${instance.winType}`;
+    	    ndiv.style.zIndex = String(JS9.BTNZINDEX);
+    	    ndiv.innerHTML = html;
+    	    ndiv.dataset.displayid = did;
+    	    if( pdivjq[0] && pdivjq[0].parentNode ){
+    		pdivjq[0].parentNode.insertBefore(ndiv, pdivjq[0].nextSibling);
+    	    }
     	}
     	instance.display.pluginInstances[plugin.name] = instance;
     	// call the init routine (usually a constructor)
     	// on entry: elements have already been defined in the context:
     	// this.div: the DOM element representing the div for this plugin
-    	// this.divjq: jquery object representing the div for this plugin
+    	// this.divjq: wrapped collection representing the div for this plugin
     	// this.id: id of the div (or the plugin name as a default)
     	// this.plugin: plugin class object (user opts in opts subobject)
     	// this.winType:  "div" (in-page div) or "light" (from view menu)
@@ -281,9 +303,9 @@ function JS9InstallViewerPlugins(JS9){
         const newPlugin = (plugin) => {
     	let j, k, instance;
     	// instantiate any divs not yet done
-    	$(`div.${plugin.name}`).each((index, element) => {
+    	document.querySelectorAll(`div.${plugin.name}`).forEach((element) => {
     	    // new instance of this div-based plugin
-    	    JS9.instantiatePlugin($(element),
+    	    JS9.instantiatePlugin(element,
     				  plugin, null, plugin.opts.divArgs);
     	});
     	// if we have a non-visible plugin (no menu and no window dims)

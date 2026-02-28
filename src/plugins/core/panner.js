@@ -2,9 +2,15 @@
  * Panner plugin
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
+
+const toolbarDisplayId = function(which){
+    const node = JS9.resolveNode(which);
+    const toolbar = node ? node.closest("div[class^=JS9PluginToolbar]") : null;
+    return toolbar ? toolbar.dataset.displayid : null;
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Panner = {};
@@ -48,7 +54,7 @@ JS9.Panner.bcall = function(...args){
     let dispid, pinst, im;
     let [which, cmd, arg1] = args;
     // the button plugintoolbar div has data containing the id of the display
-    dispid = $(which).closest("div[class^=JS9PluginToolbar]").data("displayid");
+    dispid = toolbarDisplayId(which);
     if( dispid ){
 	im = JS9.getImage(JS9.getDynamicDisplayOr(dispid));
 	pinst = im.display.pluginInstances.JS9Panner;
@@ -109,8 +115,8 @@ JS9.Panner.init = function(width, height){
     this.height = parseInt(this.divjq.css("height"), 10);
     // create DOM canvas element
     this.canvas = document.createElement("canvas");
-    // jquery version for event handling and DOM manipulation
-    this.canvasjq = $(this.canvas);
+    // wrapped canvas node for event handling and DOM updates
+    this.canvasjq = JS9.wrapCollection(this.canvas);
     // set class
     this.canvasjq.addClass("JS9Panner");
     // required so graphical layers will be on top:
@@ -128,7 +134,8 @@ JS9.Panner.init = function(width, height){
 	this.context.msImageSmoothingEnabled = false;
     }
     // add container with canvas to the high-level div
-    this.containerjq = $("<div>")
+    this.containerjq = JS9.wrapCollection(document.createElement("div"));
+    this.containerjq
 	.addClass("JS9Container")
 	.append(this.canvasjq)
 	.appendTo(this.divjq);

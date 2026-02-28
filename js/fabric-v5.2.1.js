@@ -3829,7 +3829,7 @@ fabric.warn = console.warn;
 (function() {
   // Calculate an in-between color. Returns a "rgba()" string.
   // Credit: Edwin Martin <edwin@bitstorm.org>
-  //         http://www.bitstorm.org/jquery/color-animation/jquery.animate-colors.js
+  //         http://www.bitstorm.org/color-animation/
   function calculateColor(begin, end, pos) {
     var color = 'rgba('
         + parseInt((begin[0] + pos * (end[0] - begin[0])), 10) + ','
@@ -31084,4 +31084,3 @@ fabric.util.object.extend(fabric.IText.prototype, /** @lends fabric.IText.protot
     });
   }
 })();
-

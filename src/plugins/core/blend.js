@@ -2,9 +2,13 @@
  * image blend plugin (February 25, 2016)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapBlend = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Blend = {};
@@ -146,18 +150,21 @@ JS9.Blend.activeImage = function(im){
     if( im ){
 	id = JS9.Blend.imid(im);
 	dcls = `${JS9.Blend.dispclass(im)}_Image`;
-	$(`.${dcls}`)
-	    .removeClass(`${JS9.Blend.BASE}ImageActive`)
-	    .addClass(`${JS9.Blend.BASE}ImageInactive`);
-	$(`#${id}`)
-	    .removeClass(`${JS9.Blend.BASE}ImageInactive`)
-	    .addClass(`${JS9.Blend.BASE}ImageActive`);
+	document.querySelectorAll(`.${dcls}`).forEach((element) => {
+	    element.classList.remove(`${JS9.Blend.BASE}ImageActive`);
+	    element.classList.add(`${JS9.Blend.BASE}ImageInactive`);
+	});
+	const active = document.getElementById(id);
+	if( active ){
+	    active.classList.remove(`${JS9.Blend.BASE}ImageInactive`);
+	    active.classList.add(`${JS9.Blend.BASE}ImageActive`);
+	}
     }
 };
 
 // add an image to the list of available images
 JS9.Blend.addImage = function(im){
-    let s, id, divjq, dcls, dispid, imid;
+    let s, id, dcls, dispid, imid, divjq;
     const opts = [];
     const cls = `${JS9.Blend.BASE}Image`;
     if( !im ){
@@ -187,8 +194,8 @@ JS9.Blend.addImage = function(im){
     // create the html for this image
     s = JS9.Image.prototype.expandMacro.call(im, JS9.Blend.imageHTML, opts);
     // add image html to the image container
-    divjq = $("<div>")
-	.addClass(cls)
+    divjq = wrapBlend(document.createElement("div"));
+    divjq.addClass(cls)
 	.addClass(dcls)
 	.attr("id", id)
 	.prop("imid", imid)
@@ -213,7 +220,10 @@ JS9.Blend.removeImage = function(im){
     let id;
     if( im ){
 	id = JS9.Blend.imid(im);
-	$(`#${id}`).remove();
+	const node = document.getElementById(id);
+	if( node ){
+	    node.remove();
+	}
 	this.blendDivs--;
 	if( this.blendDivs === 0 ){
 	    this.blendImageContainer.html(JS9.Blend.nofileHTML);
@@ -228,7 +238,7 @@ JS9.Blend.init = function(width, height){
     let i, im, omode, display;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -257,18 +267,21 @@ JS9.Blend.init = function(width, height){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.blendContainer = $("<div>")
+    this.blendContainer = wrapBlend(document.createElement("div"));
+    this.blendContainer
 	.addClass(`${JS9.Blend.BASE}Container`)
 	.attr("id", `${this.id}BlendContainer`)
 	.appendTo(this.divjq);
     // header
-    this.blendHeader = $("<div>")
+    this.blendHeader = wrapBlend(document.createElement("div"));
+    this.blendHeader
 	.addClass(`${JS9.Blend.BASE}Header`)
 	.attr("id", `${this.display.id}Header`)
 	.html(sprintf(JS9.Blend.blendModeHTML, this.display.id))
 	.appendTo(this.blendContainer);
     // container to hold images
-    this.blendImageContainer = $("<div>")
+    this.blendImageContainer = wrapBlend(document.createElement("div"));
+    this.blendImageContainer
 	.addClass(`${JS9.Blend.BASE}ImageContainer`)
 	.attr("id", `${this.id}BlendImageContainer`)
         .html(JS9.Blend.nofileHTML)
@@ -292,14 +305,13 @@ JS9.Blend.init = function(width, height){
     this.divjq.find(".blendModeCheck")
 	.prop("checked", !!display.blendMode);
     // the images within the image container will be sortable
-    this.blendImageContainer.sortable({
-	start: (event, ui) => {
-	    this.oidx = ui.item.index();
+    JS9.enableDragSort(this.blendImageContainer, {
+	start: ({oldIndex}) => {
+	    this.oidx = oldIndex;
 	},
-	stop: (event, ui) => {
-	    const nidx = ui.item.index();
+	stop: ({newIndex}) => {
 	    // change JS9 image array to reflect the change
-	    this.display.moveImageInStack(this.oidx, nidx);
+	    this.display.moveImageInStack(this.oidx, newIndex);
 	    // redisplay in case something changed
 	    if( this.display.image ){
 		this.display.image.displayImage();
@@ -386,4 +398,3 @@ JS9.RegisterPlugin(JS9.Blend.CLASS, JS9.Blend.NAME, JS9.Blend.init,
 		    winTitle: "Image Blending",
 		    winResize: true,
 		    winDims: [JS9.Blend.WIDTH, JS9.Blend.HEIGHT]});
-

@@ -2,9 +2,13 @@
  * shape layer plugin (October 7, 2016)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapLayers = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Layers = {};
@@ -46,22 +50,26 @@ JS9.Layers.dispclass = function(im){
 JS9.Layers.activeLayer = function(im, pinst){
     let i, s, id, dcls, order;
     if( im ){
-	order = pinst.layersLayerContainer.sortable("toArray");
+	order = JS9.getChildIds(pinst.layersLayerContainer);
 	if( (order.length === 1) && !order[0] ){
 	    return;
 	}
 	for(i=0; i<order.length; i++){
-	    order[i] = $(`#${order[i]}`).attr("layer");
+	    const node = document.getElementById(order[i]);
+	    order[i] = node ? node.getAttribute("layer") : order[i];
 	}
 	s = im.activeShapeLayer(order);
 	id = JS9.Layers.imid(im, s);
 	dcls = `${JS9.Layers.dispclass(im)}_Layer`;
-	$(`.${dcls}`)
-	    .removeClass(`${JS9.Layers.BASE}LayerActive`)
-	    .addClass(`${JS9.Layers.BASE}LayerInactive`);
-	$(`#${id}`)
-	    .removeClass(`${JS9.Layers.BASE}LayerInactive`)
-	    .addClass(`${JS9.Layers.BASE}LayerActive`);
+	document.querySelectorAll(`.${dcls}`).forEach((element) => {
+	    element.classList.remove(`${JS9.Layers.BASE}LayerActive`);
+	    element.classList.add(`${JS9.Layers.BASE}LayerInactive`);
+	});
+	const active = document.getElementById(id);
+	if( active ){
+	    active.classList.remove(`${JS9.Layers.BASE}LayerInactive`);
+	    active.classList.add(`${JS9.Layers.BASE}LayerActive`);
+	}
     }
 };
 
@@ -156,8 +164,8 @@ JS9.Layers.addLayer = function(im, layer){
     // create the html for this layer
     s = JS9.Image.prototype.expandMacro.call(im, JS9.Layers.layerHTML, opts);
     // add layer html to the layer container
-    divjq = $("<div>")
-	.addClass(cls)
+    divjq = wrapLayers(document.createElement("div"));
+    divjq.addClass(cls)
 	.addClass(dcls)
 	.attr("id", id)
 	.attr("layer", layer)
@@ -168,7 +176,7 @@ JS9.Layers.addLayer = function(im, layer){
     } else {
 	this.layersLayerContainer.find(`.${cls}`).each((idx, item) => {
 		let tlayer, tzindex;
-		const jqitem = $(item);
+		const jqitem = wrapLayers(item);
 		if( !added ){
 		    tlayer = jqitem.attr("layer");
 		    if( tlayer ){
@@ -209,7 +217,7 @@ JS9.Layers.init = function(opts){
     let key, im;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -224,19 +232,22 @@ JS9.Layers.init = function(opts){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.layersContainer = $("<div>")
+    this.layersContainer = wrapLayers(document.createElement("div"));
+    this.layersContainer
 	.addClass(`${JS9.Layers.BASE}Container`)
 	.attr("id", `${this.id}LayersContainer`)
         .css("overflow", "auto")
 	.appendTo(this.divjq);
     // header
-    this.layersHeader = $("<div>")
+    this.layersHeader = wrapLayers(document.createElement("div"));
+    this.layersHeader
 	.addClass(`${JS9.Layers.BASE}Header`)
 	.attr("id", `${this.display.id}Header`)
 	.html(JS9.Layers.headerHTML)
 	.appendTo(this.layersContainer);
     // container to hold layers
-    this.layersLayerContainer = $("<div>")
+    this.layersLayerContainer = wrapLayers(document.createElement("div"));
+    this.layersLayerContainer
 	.addClass(`${JS9.Layers.BASE}LayerContainer`)
 	.attr("id", `${this.id}LayersLayerContainer`)
         .html(JS9.Layers.nolayersHTML)
@@ -258,15 +269,9 @@ JS9.Layers.init = function(opts){
     }
     // the layers within the layer container will be sortable
     // the top one responds to events
-    this.layersLayerContainer.sortable({
-	// eslint-disable-next-line no-unused-vars
-	start: (event, ui) => {
-	    return;
-	},
-	// eslint-disable-next-line no-unused-vars
-	stop: (event, ui) => {
+    JS9.enableDragSort(this.layersLayerContainer, {
+	stop: () => {
 	    JS9.Layers.activeLayer(im, this);
-	    return;
 	}
     });
     // set initial active layer

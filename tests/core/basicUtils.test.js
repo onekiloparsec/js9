@@ -45,7 +45,7 @@ describe("CoreBasicUtils", () => {
     const merged = JS9.extend(true, { a: { b: 1 }, c: [1, 2] }, { a: { d: 2 }, c: [3] });
     expect(merged).toEqual({ a: { b: 1, d: 2 }, c: [3, 2] });
 
-    expect(JS9.isJQueryObject({ jquery: "3.7.1", length: 1 })).toBe(true);
-    expect(JS9.isJQueryObject({ length: 1 })).toBe(false);
+    expect(JS9.isWrappedCollection({ __js9Wrapped: true, length: 1 })).toBe(true);
+    expect(JS9.isWrappedCollection({ length: 1 })).toBe(false);
   });
 });

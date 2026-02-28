@@ -1,10 +1,17 @@
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
 
-/*global $, fabric, sprintf, window, document, navigator */
+/*global fabric, sprintf, window, document, navigator */
 
 "use strict";
 
 function JS9InstallFabricEngine(JS9){
+const sameMembers = function(arr1, arr2){
+    const list1 = JS9.isArray(arr1) ? arr1 : [];
+    const list2 = JS9.isArray(arr2) ? arr2 : [];
+    return list1.every((item) => JS9.inArray(item, list2) >= 0) &&
+	list2.every((item) => JS9.inArray(item, list1) >= 0);
+};
+
 // Graphics support using fabric.js
 //
 // Fabric object defines graphical primitives
@@ -302,12 +309,14 @@ JS9.Fabric.newShapeLayer = function(layerName, layerOpts, divjq){
     dlayer.el = JS9.Fabric.elements;
     // create container div and append to target
     // start with low zindex, until we add shapes
-    dlayer.divjq = $("<div>")
+    dlayer.divjq = JS9.wrapCollection(document.createElement("div"));
+    dlayer.divjq
 	.addClass("JS9Container")
 	.css("z-index", 0)
 	.appendTo(divjq);
     // create canvas element and append to container
-    dlayer.canvasjq = $("<canvas>")
+    dlayer.canvasjq = JS9.wrapCollection(document.createElement("canvas"));
+    dlayer.canvasjq
         .addClass("JS9Layer")
 	.attr("id", id)
 	.attr("width", divjq.css("width"))
@@ -973,8 +982,7 @@ JS9.Fabric._parseShapeOptions = function(layerName, opts, obj){
 	for( tkey of Object.keys(tagcolors) ){
 	    ctags = tkey.split("_");
 	    // see if all elements match
-	    if( $(tags).not(ctags).length === 0 &&
-		$(ctags).not(tags).length === 0 ){
+	    if( sameMembers(tags, ctags) ){
 		color = tagcolors[tkey];
 		break;
 	    }
@@ -983,7 +991,9 @@ JS9.Fabric._parseShapeOptions = function(layerName, opts, obj){
 	if( !color ){
 	    for( tkey of Object.keys(tagcolors) ){
 		ctags = tkey.split("_");
-		if( $(tags).not(ctags).length === 0 ){
+		if( (JS9.isArray(tags) ? tags : []).every((item) => {
+		    return JS9.inArray(item, ctags) >= 0;
+		}) ){
 		    color = tagcolors[tkey];
 		    break;
 		}
@@ -993,7 +1003,9 @@ JS9.Fabric._parseShapeOptions = function(layerName, opts, obj){
 	if( !color ){
 	    for( tkey of Object.keys(tagcolors) ){
 		ctags = tkey.split("_");
-		if( $(ctags).not(tags).length === 0 ){
+		if( (JS9.isArray(ctags) ? ctags : []).every((item) => {
+		    return JS9.inArray(item, tags) >= 0;
+		}) ){
 		    color = tagcolors[tkey];
 		    break;
 		}
@@ -2553,10 +2565,11 @@ JS9.Fabric.updateShapes = function(layerName, shape, mode, opts){
 // call using image context
 JS9.Fabric._updateMultiDialogs = function(setmode){
     // update multiselect dialog box for this image, if necessary
-    $("form[class*='regionsConfigForm']").each((index, element) => {
-	const multi = $(element).data("multi");
-	const winid = $(element).data("winid");
-	const im = $(element).data("im");
+    document.querySelectorAll("form[class*='regionsConfigForm']").forEach((element) => {
+	const wrapped = JS9.wrapCollection(element);
+	const multi = wrapped.data("multi");
+	const winid = wrapped.data("winid");
+	const im = wrapped.data("im");
 	if(  multi && winid && im === this ){
 	    if( im.tmp.updateMulti !== false ){
 		im.initRegionsForm(null, {winid, multi, setmode});
@@ -3019,7 +3032,7 @@ JS9.Fabric._updateShape = function(layerName, obj, ginfo, mode, opts){
     obj.set("pub", pub);
     // update dialog box, if necessary
     if( obj.params.winid ){
-	if( $(obj.params.winid).is(":visible") ){
+	if( JS9.wrapCollection(obj.params.winid).is(":visible") ){
 	    this.initRegionsForm(obj);
 	} else {
 	    obj.params.winid = null;

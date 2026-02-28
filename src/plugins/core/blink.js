@@ -2,9 +2,13 @@
  * image blink plugin (March 10, 2016)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapBlink = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Blink = {};
@@ -90,10 +94,12 @@ JS9.Blink.xactive = function(did, id, target){
 // change global blink mode for this display
 JS9.Blink.xblinkmode = function(id, target){
     const display = JS9.getDynamicDisplayOr(JS9.lookupDisplay(id));
-    const blinkMode = target.checked;
-    // change global blink mode
-    if( display ){
-	$(".blinkActive").prop("disabled", !blinkMode);
+	const blinkMode = target.checked;
+	// change global blink mode
+	if( display ){
+	document.querySelectorAll(".blinkActive").forEach((element) => {
+	    element.disabled = !blinkMode;
+	});
 	if( blinkMode ){
 	    display.blinkMode = true;
 	    JS9.Blink.start(display);
@@ -153,12 +159,15 @@ JS9.Blink.activeImage = function(im){
     if( im ){
 	id = JS9.Blink.imid(im);
 	dcls = `${JS9.Blink.dispclass(im)}_Image`;
-	$(`.${dcls}`)
-	    .removeClass(`${JS9.Blink.BASE}ImageActive`)
-	    .addClass(`${JS9.Blink.BASE}ImageInactive`);
-	$(`#${id}`)
-	    .removeClass(`${JS9.Blink.BASE}ImageInactive`)
-	    .addClass(`${JS9.Blink.BASE}ImageActive`);
+	document.querySelectorAll(`.${dcls}`).forEach((element) => {
+	    element.classList.remove(`${JS9.Blink.BASE}ImageActive`);
+	    element.classList.add(`${JS9.Blink.BASE}ImageInactive`);
+	});
+	const active = document.getElementById(id);
+	if( active ){
+	    active.classList.remove(`${JS9.Blink.BASE}ImageInactive`);
+	    active.classList.add(`${JS9.Blink.BASE}ImageActive`);
+	}
     }
 };
 
@@ -190,8 +199,8 @@ JS9.Blink.addImage = function(im){
     // create the html for this image
     s = im.expandMacro(JS9.Blink.imageHTML, opts);
     // add image html to the image container
-    divjq = $("<div>")
-	.addClass(cls)
+    divjq = wrapBlink(document.createElement("div"));
+    divjq.addClass(cls)
 	.addClass(dcls)
 	.attr("id", id)
 	.prop("imid", imid)
@@ -214,7 +223,10 @@ JS9.Blink.removeImage = function(im){
     let id;
     if( im ){
 	id = JS9.Blink.imid(im);
-	$(`#${id}`).remove();
+	const node = document.getElementById(id);
+	if( node ){
+	    node.remove();
+	}
 	this.blinkDivs--;
 	if( this.blinkDivs === 0 ){
 	    this.blinkImageContainer.html(JS9.Blink.nofileHTML);
@@ -231,7 +243,7 @@ JS9.Blink.init = function(){
     const opts = [];
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -251,7 +263,8 @@ JS9.Blink.init = function(){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.blinkContainer = $("<div>")
+    this.blinkContainer = wrapBlink(document.createElement("div"));
+    this.blinkContainer
 	.addClass(`${JS9.Blink.BASE}Container`)
 	.attr("id", `${this.id}BlinkContainer`)
         .css("overflow", "auto")
@@ -266,13 +279,15 @@ JS9.Blink.init = function(){
     s = JS9.Image.prototype.expandMacro.call(null, JS9.Blink.blinkModeHTML,
 					     opts);
     // header
-    this.blinkHeader = $("<div>")
+    this.blinkHeader = wrapBlink(document.createElement("div"));
+    this.blinkHeader
 	.addClass(`${JS9.Blink.BASE}Header`)
 	.attr("id", `${dispid}Header`)
 	.html(s)
 	.appendTo(this.blinkContainer);
     // container to hold images
-    this.blinkImageContainer = $("<div>")
+    this.blinkImageContainer = wrapBlink(document.createElement("div"));
+    this.blinkImageContainer
 	.addClass(`${JS9.Blink.BASE}ImageContainer`)
 	.attr("id", `${this.id}BlinkImageContainer`)
         .html(JS9.Blink.nofileHTML)
@@ -288,14 +303,13 @@ JS9.Blink.init = function(){
 	}
     }
     // the images within the image container will be sortable
-    this.blinkImageContainer.sortable({
-	start: (event, ui) => {
-	    this.oidx = ui.item.index();
+    JS9.enableDragSort(this.blinkImageContainer, {
+	start: ({oldIndex}) => {
+	    this.oidx = oldIndex;
 	},
-	stop: (event, ui) => {
-	    const nidx = ui.item.index();
+	stop: ({newIndex}) => {
 	    // change JS9 image array to reflect the change
-	    this.display.moveImageInStack(this.oidx, nidx);
+	    this.display.moveImageInStack(this.oidx, newIndex);
 	    // redisplay in case something changed
 	    if( this.display.image ){
 		this.display.image.displayImage();
@@ -347,4 +361,3 @@ JS9.RegisterPlugin(JS9.Blink.CLASS, JS9.Blink.NAME, JS9.Blink.init,
 		    winTitle: "Image Blinking",
 		    winResize: true,
 		    winDims: [JS9.Blink.WIDTH, JS9.Blink.HEIGHT]});
-

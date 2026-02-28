@@ -2,9 +2,13 @@
  * scale clipping limits plugin (August 17, 2018)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const scaleWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.ScaleLimits = {};
@@ -161,7 +165,7 @@ JS9.ScaleLimits.xaxes = function(did, id, target){
 	}
     }
     // reset top-level
-    $(target).val("Plot Axes").prop("selected", true);
+    target.value = "Plot Axes";
 };
 
 JS9.ScaleLimits.getPixelDist = function(im, ndist){
@@ -196,8 +200,8 @@ JS9.ScaleLimits.doplot = function(im){
     let dist, distmin, distmax, ntick, tickinc;
     const dmin = im.raw.dmin;
     const drange = im.raw.dmax - im.raw.dmin;
-    const pobj =  $.extend(true, {}, JS9.ScaleLimits.dataOpts);
-    const popts = $.extend(true, {}, JS9.ScaleLimits.plotOpts);
+    const pobj =  JS9.extend(true, {}, JS9.ScaleLimits.dataOpts);
+    const popts = JS9.extend(true, {}, JS9.ScaleLimits.plotOpts);
     const gettickinc = (datarange) => {
 	let tickinc;
 	if( datarange < 10 ){
@@ -358,7 +362,7 @@ JS9.ScaleLimits.doplot = function(im){
 	this.lastTextWidth = w;
     });
     this.timeout = window.setTimeout( () => {
-	this.plot = $.plot(el, [pobj], popts);
+	this.plot = JS9.plotAdapter(el, [pobj], popts);
 	this.timeout = null;
 	annotate(this.plot, xmin, this.xlocolor);
 	annotate(this.plot, xmax, this.xhicolor);
@@ -392,7 +396,7 @@ JS9.ScaleLimits.init = function(opts){
     };
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -454,7 +458,7 @@ JS9.ScaleLimits.init = function(opts){
     this.divjq.html("");
     this.lastTextWidth = 0;
     // set up new html
-    this.scalelimsContainer = $("<div>")
+    this.scalelimsContainer = scaleWrap(document.createElement("div"))
 	.addClass(`${JS9.ScaleLimits.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)

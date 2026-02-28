@@ -2,9 +2,13 @@
  * FITS 3D cube plugin (April 29, 2016)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const cubeWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Cube = {};
@@ -189,7 +193,9 @@ JS9.Cube.xorder = function(did, id, target){
 		plugin.smax = header[`NAXIS${plugin.sidx}`];
 	    }
 	}
-	$(".JS9CubeRange").prop("max", plugin.smax);
+        document.querySelectorAll(".JS9CubeRange").forEach((node) => {
+            node.max = plugin.smax;
+        });
 	JS9.Cube.doSlice(im, plugin.sval, [".JS9CubeValue", ".JS9CubeValue2", ".JS9CubeRange"]);
     }
 };
@@ -287,7 +293,7 @@ JS9.Cube.init = function(opts){
     let i, s, im, arr, mopts, imid, dispid, header, slice;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -409,7 +415,7 @@ JS9.Cube.init = function(opts){
     // clear out old html
     this.divjq.html("");
     // set up new html
-    this.cubeContainer = $("<div>")
+    this.cubeContainer = cubeWrap(document.createElement("div"))
 	.addClass(`${JS9.Cube.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)
@@ -422,9 +428,9 @@ JS9.Cube.init = function(opts){
     this.divjq.find(".JS9CubeOrder").val(this.slice);
     // hide or display wcs display
     if( this.crpix ){
-	$(".JS9CubeValue2").show();
+	this.divjq.find(".JS9CubeValue2").show();
     } else {
-	$(".JS9CubeValue2").hide();
+	this.divjq.find(".JS9CubeValue2").hide();
     }
 };
 

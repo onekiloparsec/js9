@@ -2,7 +2,7 @@
  * toolbar plugin (February 6, 2018)
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
 
@@ -22,6 +22,13 @@ JS9.Toolbar.TOOLTIPX = 30;
 JS9.Toolbar.TOOLTIPY = 50;
 JS9.Toolbar.TOOLTIPLX = 30;
 JS9.Toolbar.TOOLTIPLY = 82;
+
+JS9.Toolbar.getNodePosition = function(node){
+    return {
+	left: node ? node.offsetLeft : 0,
+	top: node ? node.offsetTop : 0
+    };
+};
 
 JS9.Toolbar.tools = [
   {
@@ -206,9 +213,10 @@ JS9.Toolbar.tools = [
 
 JS9.Toolbar.tooltip = function(tool, tooltip, e){
     let x, y, w, offset;
+    const tooltipNode = this.tooltip;
     if( tooltip ){
-	offset = $(e.currentTarget).position();
-	this.tooltip.html(tooltip);
+	offset = JS9.Toolbar.getNodePosition(e.currentTarget);
+	tooltipNode.innerHTML = tooltip;
 	if( this.winType === "light" ){
 	    x = offset.left + JS9.Toolbar.TOOLTIPLX;
 	    y = offset.top - JS9.Toolbar.TOOLTIPLY;
@@ -216,14 +224,18 @@ JS9.Toolbar.tooltip = function(tool, tooltip, e){
 	    x = offset.left + JS9.Toolbar.TOOLTIPX;
 	    y = offset.top - JS9.Toolbar.TOOLTIPY;
 	}
-	w = this.tooltip.width();
+	w = tooltipNode.getBoundingClientRect().width || tooltipNode.offsetWidth || 0;
 	// desperate attempt to place the tooltip properly
 	if( (x + w + 20) > this.width ){
 	    x = offset.left - w - 20;
 	}
-	this.tooltip.css({left: x, top: y, display: "inline-block"});
+	tooltipNode.style.left = `${x}px`;
+	tooltipNode.style.top = `${y}px`;
+	tooltipNode.style.display = "inline-block";
     } else {
-	this.tooltip.html("").css({left: -9999, display: "none"});
+	tooltipNode.innerHTML = "";
+	tooltipNode.style.left = "-9999px";
+	tooltipNode.style.display = "none";
     }
     return;
 };
@@ -237,7 +249,7 @@ JS9.Toolbar.addTool = function(tool){
     }
     // special processing: add "break" between section
     if( tool === "$break" ){
-	$("<hr>").appendTo(this.activeToolbar);
+	this.activeToolbar.appendChild(document.createElement("hr"));
 	return;
     }
     // sanity check on a real tool
@@ -245,9 +257,9 @@ JS9.Toolbar.addTool = function(tool){
 	JS9.error(`invalid input to JS9.toolbar: ${JSON.stringify(tool)}`);
     }
     // enclosing div
-    div = $("<div>")
-	.addClass(`${JS9.Toolbar.BASE}ButtonDiv`)
-	.appendTo(this.activeToolbar);
+    div = document.createElement("div");
+    div.className = `${JS9.Toolbar.BASE}ButtonDiv`;
+    this.activeToolbar.appendChild(div);
     // create the button
     if( tool.image ){
 	// relative path: add install dir prefix
@@ -259,23 +271,23 @@ JS9.Toolbar.addTool = function(tool){
 	    // external version
 	    img = JS9.InstallDir(img);
 	}
-	btn = $("<input>")
-	    .addClass(`${JS9.Toolbar.BASE}ImageButton`)
-	    .attr("type", "image")
-	    .attr("src", img)
-	    .attr("width", JS9.Toolbar.IMAGEWIDTH)
-	    .attr("height", JS9.Toolbar.IMAGEHEIGHT)
-	    .attr("alt", tool.name)
-	    .appendTo(div);
+	btn = document.createElement("input");
+	btn.className = `${JS9.Toolbar.BASE}ImageButton`;
+	btn.type = "image";
+	btn.src = img;
+	btn.width = JS9.Toolbar.IMAGEWIDTH;
+	btn.height = JS9.Toolbar.IMAGEHEIGHT;
+	btn.alt = tool.name;
+	div.appendChild(btn);
     } else {
-	btn = $("<input>")
-	    .addClass(`${JS9.Toolbar.BASE}ButtonButton`)
-	    .attr("type", "button")
-	    .attr("value", tool.name)
-	    .appendTo(div);
+	btn = document.createElement("input");
+	btn.className = `${JS9.Toolbar.BASE}ButtonButton`;
+	btn.type = "button";
+	btn.value = tool.name;
+	div.appendChild(btn);
     }
     // set up the callback to the JS9 public access routine
-    btn.on("click", () => {
+    btn.addEventListener("click", () => {
 	let args;
 	const display = this.display;
 	// special processing for commands
@@ -294,10 +306,10 @@ JS9.Toolbar.addTool = function(tool){
     });
     // tool tip is optional
     if( JS9.globalOpts.toolbarTooltips ){
-	btn.on("mouseover", (e) => {
+	btn.addEventListener("mouseover", (e) => {
 	    JS9.Toolbar.tooltip.call(this, tool, tool.tip||tool.name, e);
 	});
-	btn.on("mouseout", (e) => {
+	btn.addEventListener("mouseout", (e) => {
 	    JS9.Toolbar.tooltip.call(this, tool, null, e);
 	});
     }
@@ -311,7 +323,7 @@ JS9.Toolbar.init = function(width, height){
     let i, j, tool, name;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id of the div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -329,25 +341,25 @@ JS9.Toolbar.init = function(width, height){
     this.divjq.css("height", this.height);
     this.height = parseInt(this.divjq.css("height"), 10);
     // clean plugin container
-    this.divjq.html("");
+    this.div.innerHTML = "";
     // toolbar container
-    this.toolbarContainer = $("<div>")
-	.addClass(`${JS9.Toolbar.BASE}Container`)
-	.attr("id", `${this.id}Container`)
-	.appendTo(this.divjq);
+    this.toolbarContainer = document.createElement("div");
+    this.toolbarContainer.className = `${JS9.Toolbar.BASE}Container`;
+    this.toolbarContainer.id = `${this.id}Container`;
+    this.div.appendChild(this.toolbarContainer);
     // toolbar
-    this.activeToolbar = $("<div>")
-	.addClass(`${JS9.Toolbar.BASE}Div`)
-	.attr("id", `${this.id}Toolbar`)
-        .css("width", this.width)
-        .css("height", this.height)
-        .css("min-height", JS9.Toolbar.TOOLBARHEIGHT)
-	.appendTo(this.toolbarContainer);
+    this.activeToolbar = document.createElement("div");
+    this.activeToolbar.className = `${JS9.Toolbar.BASE}Div`;
+    this.activeToolbar.id = `${this.id}Toolbar`;
+    this.activeToolbar.style.width = `${this.width}px`;
+    this.activeToolbar.style.height = `${this.height}px`;
+    this.activeToolbar.style.minHeight = `${JS9.Toolbar.TOOLBARHEIGHT}px`;
+    this.toolbarContainer.appendChild(this.activeToolbar);
     // add a tooltip
-    this.tooltip = $("<div>")
-	.attr("id", `tooltip_${this.id}`)
-	.addClass("JS9ToolbarTooltip")
-	.appendTo(this.divjq);
+    this.tooltip = document.createElement("div");
+    this.tooltip.id = `tooltip_${this.id}`;
+    this.tooltip.className = "JS9ToolbarTooltip";
+    this.div.appendChild(this.tooltip);
     // add tools from globalOpts to the list
     for(j=0; j<JS9.globalOpts.toolBar.length; j++){
 	name = JS9.globalOpts.toolBar[j];
@@ -363,7 +375,7 @@ JS9.Toolbar.init = function(width, height){
     // add tools not in the globalOpts to the bottom of the list
     for(i=0; i<JS9.Toolbar.tools.length; i++){
 	tool = JS9.Toolbar.tools[i];
-	if( $.inArray(tool.name, JS9.globalOpts.toolBar) < 0 ){
+	if( JS9.inArray(tool.name, JS9.globalOpts.toolBar) < 0 ){
 	    JS9.Toolbar.addTool.call(this, tool);
 	}
     }
@@ -422,7 +434,7 @@ JS9.mkPublic("SetToolbar", function(...args){
 	JS9.Toolbar.tools.push(arg1);
 	// reinit toolbar
 	reinit();
-    } else if( $.isArray(arg1) ){
+    } else if( JS9.isArray(arg1) ){
 	// array of new tools
 	for(i=0; i<arg1.length; i++){
 	    JS9.Toolbar.tools.push(arg1[i]);

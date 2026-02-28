@@ -2,9 +2,18 @@
  * image filters plugin (November 2, 2019)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapFilters = function(value){
+    return JS9.wrapCollection(value);
+};
+
+const filterContainer = function(target){
+    const node = JS9.resolveNode(target);
+    return node ? node.closest(`.${JS9.Filters.BASE}Container`) : null;
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Filters = {};
@@ -76,24 +85,21 @@ JS9.Filters.resetHTML=`
 
 // update gui filter param value
 JS9.Filters.updateval = function(target, filter, val){
-    if( target && $(target).length > 0 ){
+    const container = filterContainer(target);
+    if( container ){
 	if( filter ){
-	    $(target)
-		.closest(`.${JS9.Filters.BASE}Container`)
+	    wrapFilters(container)
 		.find(`[name='${filter}']`)
 		.prop("value", val);
-	    $(target)
-		.closest(`.${JS9.Filters.BASE}Container`)
+	    wrapFilters(container)
 		.find(`[name='${filter}val']`)
 		.prop("value", val);
-	    $(target)
-		.closest(`.${JS9.Filters.BASE}Container`)
+	    wrapFilters(container)
 		.find(`[name='undo']`)
 		.prop("value", `undo ${filter}`)
 	        .css("width", "100px");
 	} else {
-	    $(target)
-		.closest(`.${JS9.Filters.BASE}Container`)
+	    wrapFilters(container)
 		.find(`[name='undo']`)
 		.prop("value", `undo`)
 	        .css("width", "70px");
@@ -180,8 +186,7 @@ JS9.Filters.xgenfilter = function(did, id, filter, target){
     if( im ){
 	val = parseFloat(target.value)
 	JS9.Filters.xfilter(target, did, id, filter, val);
-	$(target)
-	    .closest(`.${JS9.Filters.BASE}Container`)
+	wrapFilters(filterContainer(target))
 	    .find(`[name='${filter}val']`)
 	    .prop("value", val);
     }
@@ -193,8 +198,7 @@ JS9.Filters.xgenval = function(did, id, filter, target){
     if( im ){
 	val = parseFloat(target.value)
 	JS9.Filters.xfilter(target, did, id, filter, val);
-	$(target)
-	    .closest(`.${JS9.Filters.BASE}Container`)
+	wrapFilters(filterContainer(target))
 	    .find(`[name='${filter}']`)
 	    .prop("value", val);
     }
@@ -234,7 +238,7 @@ JS9.Filters.init = function(opts){
     let s, t, im, mopts, imid, dispid, html, key, obj;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -260,7 +264,8 @@ JS9.Filters.init = function(opts){
     // param values for image processing
     delete this.stack;
     // set up new html
-    this.filtersContainer = $("<div>")
+    this.filtersContainer = wrapFilters(document.createElement("div"));
+    this.filtersContainer
 	.addClass(`${JS9.Filters.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)

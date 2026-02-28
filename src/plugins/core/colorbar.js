@@ -2,7 +2,7 @@
  * colorbar plugin (March 8, 2016)
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
 
@@ -182,7 +182,7 @@ JS9.Colorbar.init = function(width, height){
     const ratio = JS9.PIXEL_RATIO || 1;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id of the div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -237,35 +237,35 @@ JS9.Colorbar.init = function(width, height){
 	this.ticks = JS9.Colorbar.TICKS;
     }
     // clean plugin container
-    this.divjq.html("");
+    this.div.innerHTML = "";
     // colorbar container
-    this.colorbarContainer = $("<div>")
-	.addClass(`${JS9.Colorbar.BASE}Container`)
-	.attr("id", `${this.id}Container`)
-        .attr("width", this.width)
-        .attr("height", this.height)
-	.appendTo(this.divjq);
+    this.colorbarContainer = document.createElement("div");
+    this.colorbarContainer.className = `${JS9.Colorbar.BASE}Container`;
+    this.colorbarContainer.id = `${this.id}Container`;
+    this.colorbarContainer.setAttribute("width", String(this.width));
+    this.colorbarContainer.setAttribute("height", String(this.height));
+    this.div.appendChild(this.colorbarContainer);
     // main canvas
-    this.colorbarjq = $("<canvas>")
-	.addClass(`${JS9.Colorbar.BASE}Canvas`)
-	.attr("id", `${this.id}Canvas`)
-        .attr("width", this.width-1)
-        .attr("height", this.colorbarHeight)
-	.appendTo(this.colorbarContainer);
-    this.ctx = this.colorbarjq[0].getContext("2d", {willReadFrequently: true});
+    this.colorbarjq = document.createElement("canvas");
+    this.colorbarjq.className = `${JS9.Colorbar.BASE}Canvas`;
+    this.colorbarjq.id = `${this.id}Canvas`;
+    this.colorbarjq.width = this.width - 1;
+    this.colorbarjq.height = this.colorbarHeight;
+    this.colorbarContainer.appendChild(this.colorbarjq);
+    this.ctx = this.colorbarjq.getContext("2d", {willReadFrequently: true});
     // set up for text display?
     if( this.showTicks ){
 	// numeric text and tick marks
 	// (height and width changes deal with HiDPI text blur problems!)
-	this.textjq = $("<canvas>")
-	    .addClass(`${JS9.Colorbar.BASE}TextCanvas`)
-	    .attr("id", `${this.id}TextCanvas`)
-            .attr("width", this.width * ratio)
-            .attr("height", (this.height - this.colorbarHeight) * ratio)
-            .css("width", `${this.width}px`)
-            .css("height", `${this.height - this.colorbarHeight}px`)
-	    .appendTo(this.colorbarContainer);
-	this.textctx = this.textjq[0].getContext("2d");
+	this.textjq = document.createElement("canvas");
+	this.textjq.className = `${JS9.Colorbar.BASE}TextCanvas`;
+	this.textjq.id = `${this.id}TextCanvas`;
+	this.textjq.width = this.width * ratio;
+	this.textjq.height = (this.height - this.colorbarHeight) * ratio;
+	this.textjq.style.width = `${this.width}px`;
+	this.textjq.style.height = `${this.height - this.colorbarHeight}px`;
+	this.colorbarContainer.appendChild(this.textjq);
+	this.textctx = this.textjq.getContext("2d");
 	// font specified in data property of div element?
 	this.colorbarFont = this.divjq.attr("data-colorbarFont");
 	if( this.colorbarFont ){

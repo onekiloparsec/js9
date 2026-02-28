@@ -2,9 +2,28 @@
  * color controls plugin (March 18, 2020)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapColorTarget = function(value){
+    return JS9.wrapCollection(value);
+};
+
+const colorContainerNode = function(target){
+    const node = JS9.resolveNode(target);
+    return node ? node.parentElement : null;
+};
+
+const setSelectedColorOption = function(selector, text){
+    const options = Array.from(document.querySelectorAll(`${selector} option`));
+    const match = options.find((element) => {
+	return element.textContent.trim() === text;
+    });
+    if( match ){
+	match.selected = true;
+    }
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Color = {};
@@ -65,19 +84,19 @@ JS9.Color.xsetcolor = function(did, id, which, target){
 	switch(which){
 	case "top":
 	    if( typeof target === "string" ){
-		$(".JS9Cmaps1 option").filter((index, element) => {
-		    return $(element).text().trim() === target;
-		}).prop("selected", true);
+		setSelectedColorOption(".JS9Cmaps1", target);
 	    }
-	    $(".JS9Cmaps2").prop("selectedIndex", 0);
+	    document.querySelectorAll(".JS9Cmaps2").forEach((element) => {
+		element.selectedIndex = 0;
+	    });
 	    break;
 	case "other":
 	    if( typeof target === "string" ){
-		$(".JS9Cmaps2 option").filter((index, element) => {
-		    return $(element).text().trim() === target;
-		}).prop("selected", true);
+		setSelectedColorOption(".JS9Cmaps2", target);
 	    }
-	    $(".JS9Cmaps1").prop("selectedIndex", 0);
+	    document.querySelectorAll(".JS9Cmaps1").forEach((element) => {
+		element.selectedIndex = 0;
+	    });
 	    break;
 	default:
 	    break;
@@ -87,10 +106,10 @@ JS9.Color.xsetcolor = function(did, id, which, target){
 
 // set contrast and bias
 JS9.Color.xconbi = function(did, id, target){
-    let s1, s2, pel;
+    let s1, s2;
+    const pel = wrapColorTarget(colorContainerNode(target));
     const im = JS9.lookupImage(id, did);
     if( im ){
-	pel = $(target).parent();
 	s1 = pel.find("[name='contrast']").val();
 	s2 = pel.find("[name='bias']").val();
 	if( JS9.isNumber(s1) && JS9.isNumber(s2) ){
@@ -102,7 +121,7 @@ JS9.Color.xconbi = function(did, id, target){
 // set global opacity
 JS9.Color.xopacity = function(did, id, target){
     let s1, s2, obj, plugin;
-    const pel = $(target).parent();
+    const pel = wrapColorTarget(colorContainerNode(target));
     const from = pel.find("[name='from']").val();
     const im = JS9.lookupImage(id, did);
     if( im ){
@@ -175,7 +194,7 @@ JS9.Color.xopacity = function(did, id, target){
 // set where we are getting opacity from
 JS9.Color.xfrom = function(did, id, target){
     let plugin;
-    const pel = $(target).parent();
+    const pel = wrapColorTarget(colorContainerNode(target));
     const from = target.value;
     const im = JS9.lookupImage(id, did);
     if( im ){
@@ -192,7 +211,7 @@ JS9.Color.xfrom = function(did, id, target){
 
 JS9.Color.xsetfile = function(did, id, mode, target){
     let obj, s;
-    const pel = $(target).parent();
+    const pel = wrapColorTarget(colorContainerNode(target));
     const im = JS9.lookupImage(id, did);
     if( im ){
 	if( target.value === "none" ){
@@ -419,7 +438,7 @@ JS9.Color.init = function(opts){
     };
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -449,7 +468,8 @@ JS9.Color.init = function(opts){
     // clear out html
     this.divjq.html("");
     // set up new html
-    this.colorContainer = $("<div>")
+    this.colorContainer = wrapColorTarget(document.createElement("div"));
+    this.colorContainer
 	.addClass(`${JS9.Color.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)

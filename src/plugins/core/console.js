@@ -3,9 +3,13 @@
  * basic idea borrowed from goosh.org, to whom grateful acknowledgement is made
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
+
+const consoleWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Console = {};
@@ -33,7 +37,7 @@ JS9.Console.init = function(width, height){
     // add ability to handle events to this div
     // this.divjq.attr("tabindex", "0");
     // add container into the div
-    this.consoleConjq = $("<div>")
+    this.consoleConjq = consoleWrap(document.createElement("div"))
 	.addClass("JS9ConsoleContainer")
 	.appendTo(this.divjq);
     // light wins: size is set by containing window
@@ -110,7 +114,10 @@ JS9.Console.out = function(s, c){
 	break;
     }
     // create a new output element
-    $("<div>").addClass(`JS9Cmd${c}`).html(s).appendTo(this.consoleConjq);
+    consoleWrap(document.createElement("div"))
+        .addClass(`JS9Cmd${c}`)
+        .html(s)
+        .appendTo(this.consoleConjq);
     // allow chaining
     return this;
 };

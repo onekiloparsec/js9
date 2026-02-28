@@ -3,7 +3,7 @@
  * whenever an operation is performed on this image, sync the target images
  */
 
-/*global JS9, $ */
+/*global JS9 */
 
 "use strict";
 
@@ -18,7 +18,7 @@ JS9.Sync.getOps = function(ops){
     const xops = [];
     //  default from above ...
     ops = ops || JS9.globalOpts.syncOps;
-    if( !$.isArray(ops) ){
+    if( !JS9.isArray(ops) ){
 	try{ ops = JSON.parse(ops); }
 	catch(e){ ops = [ops]; }
     }
@@ -44,7 +44,7 @@ JS9.Sync.getIms = function(ims){
     let i, j, xim;
     const xims = [];
     ims = ims || JS9.images;
-    if( !$.isArray(ims) ){
+    if( !JS9.isArray(ims) ){
 	try{ ims = JSON.parse(ims); }
 	catch(e){ ims = [ims]; }
     }
@@ -104,7 +104,7 @@ JS9.Sync.sync = function(...args){
 	// add images not already in the list
 	for(j=0; j<xlen; j++){
 	    xim = xims[j];
-	    if( $.inArray(xim, ims) < 0 ){
+	    if( JS9.inArray(xim, ims) < 0 ){
 		// add to list
 		ims.push(xim);
 		// we'll sync each new target image
@@ -163,7 +163,7 @@ JS9.Sync.unsync = function(ops, ims, opts){
     // for each op in this image ...
     for( op of Object.keys(this.syncs) ){
 	// skip this op if its not in the specified op list
-	if( xops && $.inArray(op, xops) < 0 ){
+	if( xops && JS9.inArray(op, xops) < 0 ){
 	    continue;
 	}
 	// if no target images specified, delete the whole thing
@@ -175,7 +175,7 @@ JS9.Sync.unsync = function(ops, ims, opts){
 	    // for each target image ...
 	    for(i=tims.length-1; i>=0; i--){
 		// remove if it was specified for removal
-		if( $.inArray(tims[i], xims) >= 0 ){
+		if( JS9.inArray(tims[i], xims) >= 0 ){
 		    tims.splice(i, 1);
 		}
 	    }
@@ -329,7 +329,7 @@ JS9.Sync.xeqSync = function(arr){
 		    // process all regions ...
 		    for(j=0; j<args.length; j++){
 			// get a copy of the regions object so we can change it
-			myobj = $.extend(true, {}, args[j]);
+			myobj = JS9.extend(true, {}, args[j]);
 			// get a sync id
 			if( myobj.data && myobj.data.syncid ){
 			    // reuse its syncid, if possible
@@ -472,14 +472,14 @@ JS9.Sync.maybeSync = function(ops, arg){
     if( !JS9.Sync.ready || !this.syncs || this.tmp.syncRunning ){
 	return;
     }
-    if( !$.isArray(ops) ){
+    if( !JS9.isArray(ops) ){
 	ops = [ops];
     }
     // do we need to sync images for this operation?
     if( this.syncs.active ){
 	for(j=0; j<ops.length; j++){
 	    op = ops[j];
-	    if( $.isArray(this.syncs[op]) && this.syncs[op].length ){
+	    if( JS9.isArray(this.syncs[op]) && this.syncs[op].length ){
 		// setup sync of all target images
 		ims = this.syncs[op];
 		arr = [];

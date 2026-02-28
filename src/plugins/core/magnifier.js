@@ -2,9 +2,15 @@
  * Magnifier plugin
  */
 
-/*global $, JS9, fabric */
+/*global JS9, fabric */
 
 "use strict";
+
+const toolbarDisplayId = function(which){
+    const node = JS9.resolveNode(which);
+    const toolbar = node ? node.closest("div[class^=JS9PluginToolbar]") : null;
+    return toolbar ? toolbar.dataset.displayid : null;
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Magnifier = {};
@@ -42,7 +48,7 @@ JS9.Magnifier.bcall = function(...args){
     let dispid, im;
     let [which, cmd, arg1] = args;
     // the button plugintoolbar div has data containing the id of the display
-    dispid = $(which).closest("div[class^=JS9PluginToolbar]").data("displayid");
+    dispid = toolbarDisplayId(which);
     if( dispid ){
 	im = JS9.getImage(dispid);
     } else {
@@ -94,8 +100,8 @@ JS9.Magnifier.init = function(width, height){
     this.height = parseInt(this.divjq.css("height"), 10);
     // create DOM canvas element
     this.canvas = document.createElement("canvas");
-    // jquery version for event handling and DOM manipulation
-    this.canvasjq = $(this.canvas);
+    // wrapped canvas node for event handling and DOM updates
+    this.canvasjq = JS9.wrapCollection(this.canvas);
     // set class
     this.canvasjq.addClass("JS9Magnifier");
     // required so graphical layers will be on top:
@@ -111,7 +117,8 @@ JS9.Magnifier.init = function(width, height){
 	this.context.imageSmoothingEnabled = false;
     }
     // add container with canvas to the high-level div
-    this.containerjq = $("<div>")
+    this.containerjq = JS9.wrapCollection(document.createElement("div"));
+    this.containerjq
 	.addClass("JS9Container")
 	.append(this.canvasjq)
 	.appendTo(this.divjq);
@@ -202,7 +209,7 @@ JS9.Magnifier.display = function(im, ipos){
 	// add the center point to the magnifier, if necessary
 	im.magnifier.boxid = im.addShapes("magnifier", "box");
 	// make background black, which looks better at the edge
-	$(magDisp.canvas).css("background-color", "black");
+	JS9.wrapCollection(magDisp.canvas).css("background-color", "black");
     }
     // center point size and position, based on zoom
     // (subtract 1 to center the box on the pixel 2/4/2020)
@@ -272,7 +279,7 @@ JS9.Magnifier.clear = function(im){
 	im.magnifier.boxid = null;
 	im.magnifier.ozoom = 0;
 	// restore original background color
-	$(magnifier.canvas).css("background-color", "#E9E9E9");
+	JS9.wrapCollection(magnifier.canvas).css("background-color", "#E9E9E9");
     }
     return im;
 };

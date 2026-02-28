@@ -2,9 +2,13 @@
  * image separate/gather plugin (July 26, 2018)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapSeparate = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Separate = {};
@@ -119,12 +123,15 @@ JS9.Separate.activeImage = function(im){
     if( im ){
 	id = JS9.Separate.imid(im);
 	dcls = `${JS9.Separate.dispclass(im)}_Image`;
-	$(`.${dcls}`)
-	    .removeClass(`${JS9.Separate.BASE}ImageActive`)
-	    .addClass(`${JS9.Separate.BASE}ImageInactive`);
-	$(`#${id}`)
-	    .removeClass(`${JS9.Separate.BASE}ImageInactive`)
-	    .addClass(`${JS9.Separate.BASE}ImageActive`);
+	document.querySelectorAll(`.${dcls}`).forEach((element) => {
+	    element.classList.remove(`${JS9.Separate.BASE}ImageActive`);
+	    element.classList.add(`${JS9.Separate.BASE}ImageInactive`);
+	});
+	const active = document.getElementById(id);
+	if( active ){
+	    active.classList.remove(`${JS9.Separate.BASE}ImageInactive`);
+	    active.classList.add(`${JS9.Separate.BASE}ImageActive`);
+	}
     }
 };
 
@@ -155,8 +162,8 @@ JS9.Separate.addImage = function(im){
     // create the html for this image
     s = JS9.Image.prototype.expandMacro.call(im, JS9.Separate.imageHTML, opts);
     // add image html to the image container
-    divjq = $("<div>")
-	.addClass(cls)
+    divjq = wrapSeparate(document.createElement("div"));
+    divjq.addClass(cls)
 	.addClass(dcls)
 	.attr("id", id)
 	.prop("imid", imid)
@@ -180,7 +187,10 @@ JS9.Separate.removeImage = function(im){
     let id;
     if( im ){
 	id = JS9.Separate.imid(im);
-	$(`#${id}`).remove();
+	const node = document.getElementById(id);
+	if( node ){
+	    node.remove();
+	}
 	this.separateDivs--;
 	if( this.separateDivs === 0 ){
 	    this.separateImageContainer.html(JS9.Separate.nofileHTML);
@@ -197,7 +207,7 @@ JS9.Separate.init = function(){
     const opts = [];
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -210,7 +220,8 @@ JS9.Separate.init = function(){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.separateContainer = $("<div>")
+    this.separateContainer = wrapSeparate(document.createElement("div"));
+    this.separateContainer
 	.addClass(`${JS9.Separate.BASE}Container`)
 	.attr("id", `${this.id}SeparateContainer`)
         .css("overflow", "auto")
@@ -223,13 +234,15 @@ JS9.Separate.init = function(){
     s = JS9.Image.prototype.expandMacro.call(null, JS9.Separate.topHTML,
 					     opts);
     // header
-    this.separateHeader = $("<div>")
+    this.separateHeader = wrapSeparate(document.createElement("div"));
+    this.separateHeader
 	.addClass(`${JS9.Separate.BASE}Header`)
 	.attr("id", `${dispid}Header`)
 	.html(s)
 	.appendTo(this.separateContainer);
     // container to hold images
-    this.separateImageContainer = $("<div>")
+    this.separateImageContainer = wrapSeparate(document.createElement("div"));
+    this.separateImageContainer
 	.addClass(`${JS9.Separate.BASE}ImageContainer`)
 	.attr("id", `${this.id}SeparateImageContainer`)
         .html(JS9.Separate.nofileHTML)
@@ -243,14 +256,13 @@ JS9.Separate.init = function(){
 	}
     }
     // the images within the image container will be sortable
-    this.separateImageContainer.sortable({
-	start: (event, ui) => {
-	    this.oidx = ui.item.index();
+    JS9.enableDragSort(this.separateImageContainer, {
+	start: ({oldIndex}) => {
+	    this.oidx = oldIndex;
 	},
-	stop: (event, ui) => {
-	    const nidx = ui.item.index();
+	stop: ({newIndex}) => {
 	    // change JS9 image array to reflect the change
-	    this.display.moveImageInStack(this.oidx, nidx);
+	    this.display.moveImageInStack(this.oidx, newIndex);
 	    // redisplay in case something changed
 	    if( this.display.image ){
 		this.display.image.displayImage();
@@ -299,4 +311,3 @@ JS9.RegisterPlugin(JS9.Separate.CLASS, JS9.Separate.NAME, JS9.Separate.init,
 		    winTitle: "Separate/Gather Images",
 		    winResize: true,
 		    winDims: [JS9.Separate.WIDTH, JS9.Separate.HEIGHT]});
-

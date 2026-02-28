@@ -2,9 +2,33 @@
  * preferences plugin (14 April 2015)
  */
 
-/*global $, JS9, ddtabcontent */
+/*global JS9, ddtabcontent */
 
 "use strict";
+
+const prefsClosestForm = function(target){
+    return target && target.closest ? target.closest("form") : null;
+};
+
+const prefsFormMeta = function(form){
+    if( !form ){
+        return {};
+    }
+    return {
+        display: form._js9Display,
+        source: form._js9Source,
+        winid: form._js9Winid
+    };
+};
+
+const prefsUncheckedCheckboxes = function(form){
+    if( !form ){
+        return [];
+    }
+    return Array.from(form.querySelectorAll("input[type='checkbox']:not(:checked)")).map((input) => {
+        return {name: input.name, value: "false"};
+    });
+};
 
 // To specify the JS9 display instance to link to a given PREFS div,
 // use the HTML5 dataset syntax:
@@ -668,9 +692,17 @@ JS9.Prefs.regions = function(){
     JS9.Prefs.sources=sources;
 };
 
+JS9.Prefs.closeForm = function(target){
+    const meta = prefsFormMeta(prefsClosestForm(target));
+    if( meta.winid && typeof meta.winid.close === "function" ){
+        meta.winid.close();
+    }
+    return false;
+};
+
 // init preference plugin
 JS9.Prefs.init = function(){
-    let i, s, obj, key, props, sources, source, id, pid, html, prompt;
+    let i, s, obj, key, props, sources, source, id, pid, html, prompt, form;
     // create the div containing one tab for each of the sources
     sources = JS9.Prefs.sources;
     pid = `${this.id}prefsTabs`;
@@ -784,7 +816,7 @@ JS9.Prefs.init = function(){
 	}
 	// light windows get a close button
 	if( this.winType === "light" ){
-	    html += `<input id='${this.id}_closePrefs' name='Close' type='button' class='button' value='Close' onclick='const form = $(this).closest("form"); const winid = form.data("winid"); winid.close(); return false;' style='float: right; margin: 8px'>`;
+	    html += `<input id='${this.id}_closePrefs' name='Close' type='button' class='button' value='Close' onclick='return JS9.Prefs.closeForm(this);' style='float: right; margin: 8px'>`;
 	}
 	html += "</form>";
 	html += "</div>";
@@ -797,11 +829,14 @@ JS9.Prefs.init = function(){
     for(i=0; i<sources.length; i++){
 	source = sources[i];
 	id = this.id + JS9.Prefs.CLASS + JS9.Prefs.NAME + source.name;
-	$( `#${id}Form`).data("display", this.display);
-	$( `#${id}Form`).data("source", source);
-	if( this.winType === "light" ){
-	    $( `#${id}Form`).data("winid", this.winHandle);
-	}
+        form = document.getElementById(`${id}Form`);
+        if( form ){
+            form._js9Display = this.display;
+            form._js9Source = source;
+            if( this.winType === "light" ){
+                form._js9Winid = this.winHandle;
+            }
+        }
     }
     // now init the tab content
     this.tabs = new ddtabcontent(pid); //enter ID of Tab Container
@@ -813,21 +848,18 @@ JS9.Prefs.init = function(){
 // action for Apply in Form
 JS9.Prefs.applyForm = function(){
     let arr, arr2;
-    const form = $(this).closest("form");
-    const display = form.data("display");
-    const source = form.data("source");
-    const winid = form.data("winid");
-    arr = form.serializeArray();
-    arr2 = arr.concat($(`#${form.attr("id")} input[type=checkbox]:not(:checked)`).map((i, e) => {return {"name": e.name, "value": "false"};}).get());
-    JS9.Prefs.processForm(source, arr2, display, winid);
+    const form = prefsClosestForm(this);
+    const meta = prefsFormMeta(form);
+    arr = JS9.wrapCollection(form).serializeArray();
+    arr2 = arr.concat(prefsUncheckedCheckboxes(form));
+    JS9.Prefs.processForm(meta.source, arr2, meta.display, meta.winid);
     return false;
 };
 
 // action for Save in Form
 JS9.Prefs.saveForm = function(){
     let props, key;
-    const form = $(this).closest("form");
-    const source = form.data("source");
+    const source = prefsFormMeta(prefsClosestForm(this)).source;
     const opts = {cmd: "desktop", mode: "save"};
     const saveobj = {};
     JS9.Prefs.applyForm.call(this);
@@ -862,8 +894,7 @@ JS9.Prefs.saveForm = function(){
 // action for Show in Form
 JS9.Prefs.showForm = function(){
     let s, t;
-    const form = $(this).closest("form");
-    const source = form.data("source");
+    const source = prefsFormMeta(prefsClosestForm(this)).source;
     // desktop handled specially
     if( source.name === "desktop" ){
 	if( JS9.cmdlineOpts ){
@@ -889,8 +920,7 @@ JS9.Prefs.showForm = function(){
 
 // action for Delete in Form
 JS9.Prefs.deleteForm = function(){
-    const form = $(this).closest("form");
-    const source = form.data("source");
+    const source = prefsFormMeta(prefsClosestForm(this)).source;
     const opts = {cmd: "desktop", mode: "remove"};
     // desktop handled specially
     if( source.name === "desktop" ){

@@ -2,9 +2,13 @@
  * visibility of JS9 in-page plugin divs (January 13, 2017)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const divsWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Divs = {};
@@ -64,7 +68,7 @@ JS9.Divs.addDiv = function(plugin){
     // create the html for this div
     s = JS9.Image.prototype.expandMacro.call(null, JS9.Divs.divHTML, opts);
     // add div html to the div container
-    divjq = $("<div>")
+    divjq = divsWrap(document.createElement("div"))
 	.addClass(cls)
         .html(s)
 	.appendTo(this.divsDivContainer);
@@ -80,7 +84,7 @@ JS9.Divs.init = function(opts){
     let key, instances;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id of the div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -95,19 +99,19 @@ JS9.Divs.init = function(opts){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.divsContainer = $("<div>")
+    this.divsContainer = divsWrap(document.createElement("div"))
 	.addClass(`${JS9.Divs.BASE}Container`)
 	.attr("id", `${this.id}DivsContainer`)
         .css("overflow", "auto")
 	.appendTo(this.divjq);
     // header
-    this.divsHeader = $("<div>")
+    this.divsHeader = divsWrap(document.createElement("div"))
 	.addClass(`${JS9.Divs.BASE}Header`)
 	.attr("id", `${this.display.id}Header`)
 	.html(JS9.Divs.headerHTML)
 	.appendTo(this.divsContainer);
     // container to hold divs
-    this.divsDivContainer = $("<div>")
+    this.divsDivContainer = divsWrap(document.createElement("div"))
 	.addClass(`${JS9.Divs.BASE}DivContainer`)
 	.attr("id", `${this.id}DivsDivContainer`)
         .html(JS9.Divs.nodivsHTML)

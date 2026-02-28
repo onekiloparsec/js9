@@ -2,9 +2,13 @@
  * keyboard plugin (September 21, 2016)
  */
 
-/*global $, JS9, sprintf, fabric */
+/*global JS9, sprintf, fabric */
 
 "use strict";
+
+const keyboardWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Keyboard = {};
@@ -28,7 +32,8 @@ JS9.Keyboard.addAction = function(container, cname, aname){
     // create the html for this action
     s = sprintf(JS9.Keyboard.actionHTML, aname, cname, aname);
     // add action html to the action container
-    divjq = $("<div class='JS9KeyboardItem'>")
+    divjq = keyboardWrap(document.createElement("div"))
+	.addClass("JS9KeyboardItem")
 	.attr("id", id)
 	.html(s)
 	.appendTo(container);
@@ -818,7 +823,7 @@ JS9.Keyboard.init = function(){
     let s, key;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -829,18 +834,18 @@ JS9.Keyboard.init = function(){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.keyboardContainer = $("<div>")
+    this.keyboardContainer = keyboardWrap(document.createElement("div"))
 	.addClass(`${JS9.Keyboard.BASE}Container`)
 	.attr("id", `${this.id}KeyboardContainer`)
 	.appendTo(this.divjq);
     s = `<div class='${JS9.Keyboard.BASE}Header'><b>Keys and their actions (or click the buttons):</b></div><p>`;
-    this.keyboardHeadContainer = $("<div>")
+    this.keyboardHeadContainer = keyboardWrap(document.createElement("div"))
 	.addClass(`${JS9.Keyboard.BASE}Container`)
 	.attr("id", `${this.id}KeyboardHeadContainer`)
         .html(s)
 	.appendTo(this.keyboardContainer);
     // container to hold keyboard actions
-    this.keyboardActionContainer = $("<div>")
+    this.keyboardActionContainer = keyboardWrap(document.createElement("div"))
 	.addClass(`${JS9.Keyboard.BASE}ActionContainer`)
 	.attr("id", `${this.id}ActionContainer`)
         .html("")

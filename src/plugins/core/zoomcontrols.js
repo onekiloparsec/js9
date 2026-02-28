@@ -2,9 +2,38 @@
  * pan/zoom controls plugin (October 30, 2019)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const panZoomWrap = function(value){
+    return JS9.wrapCollection(value);
+};
+
+const panZoomParent = function(target){
+    return target && target.parentElement ? target.parentElement : null;
+};
+
+const panZoomInputValue = function(target, name){
+    const parent = panZoomParent(target);
+    const input = parent ? parent.querySelector(`[name='${name}']`) : null;
+    return input ? input.value : "";
+};
+
+const panZoomSetInputValue = function(target, name, value){
+    const parent = panZoomParent(target);
+    const input = parent ? parent.querySelector(`[name='${name}']`) : null;
+    if( input ){
+        input.value = value;
+    }
+};
+
+const panZoomCaretToEnd = function(input){
+    const len = input && typeof input.value === "string" ? input.value.length : 0;
+    if( input && typeof input.setSelectionRange === "function" ){
+        input.setSelectionRange(len, len);
+    }
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.PanZoom = {};
@@ -139,7 +168,7 @@ JS9.PanZoom.xsetrot = function(did, id, target, evt){
     const im = JS9.lookupImage(id, did);
     if( im ){
 	if( evt.keyCode !== 13 ){ return; }
-	rot = $(target).val().trim();
+	rot = target.value.trim();
 	if( rot ){
 	    if( rot === "reset" ){
 		im.setRotate("reset");
@@ -154,7 +183,11 @@ JS9.PanZoom.xsetrot = function(did, id, target, evt){
 	    im.setRotate(rot);
 	    // do this after setting rotation
 	    if( pinst ){
-		pinst.divjq.find(`input[name="rotate"]`).focus().caretToEnd();
+                const rotateInput = pinst.div && pinst.div.querySelector("input[name='rotate']");
+                if( rotateInput ){
+                    rotateInput.focus();
+                    panZoomCaretToEnd(rotateInput);
+                }
 	    }
 	}
     }
@@ -162,13 +195,12 @@ JS9.PanZoom.xsetrot = function(did, id, target, evt){
 
 // pan to the position specified in the pos1,pos2 input elements
 JS9.PanZoom.xpanto = function(did, id, target){
-    let owcssys, arr, p1, p2, s1, s2, wcssys, pel, phys;
+    let owcssys, arr, p1, p2, s1, s2, wcssys, phys;
     const im = JS9.lookupImage(id, did);
     if( im ){
-	pel = $(target).parent();
-	wcssys = pel.find("[name='wcssys']").val();
-	s1 = pel.find("[name='pos1']").val();
-	s2 = pel.find("[name='pos2']").val();
+	wcssys = panZoomInputValue(target, "wcssys");
+	s1 = panZoomInputValue(target, "pos1");
+	s2 = panZoomInputValue(target, "pos2");
 	if( s1 && s2 && wcssys ){
 	    owcssys = im.getWCSSys();
 	    im.setWCSSys(wcssys);
@@ -200,7 +232,7 @@ JS9.PanZoom.xpanto = function(did, id, target){
 
 // change the wcs system
 JS9.PanZoom.xsetwcssys = function(did, id, target){
-    let owcssys, owcsunits, pel, pos1, pos2;
+    let owcssys, owcsunits, pos1, pos2;
     const nwcssys = target.value;
     const im = JS9.lookupImage(id, did);
     if( im ){
@@ -210,9 +242,8 @@ JS9.PanZoom.xsetwcssys = function(did, id, target){
 	im.tmp.wcssysPanZoom = nwcssys;
 	pos1 = JS9.PanZoom.getPos(im, "x");
 	pos2 = JS9.PanZoom.getPos(im, "y");
-	pel = $(target).parent();
-	pel.find("[name='pos1']").val(pos1);
-	pel.find("[name='pos2']").val(pos2);
+        panZoomSetInputValue(target, "pos1", pos1);
+        panZoomSetInputValue(target, "pos2", pos2);
 	if( im.getWCSUnits() !== (im.tmp.wcsunitsPanZoom||owcsunits) ){
 	    JS9.PanZoom.xsetwcsunits(did, id, {value: im.getWCSUnits()});
 	}
@@ -223,7 +254,7 @@ JS9.PanZoom.xsetwcssys = function(did, id, target){
 
 // change the wcs units
 JS9.PanZoom.xsetwcsunits = function(did, id, target){
-    let owcssys, owcsunits, pel, pos1, pos2;
+    let owcssys, owcsunits, pos1, pos2;
     const nwcsunits = target.value;
     const im = JS9.lookupImage(id, did);
     if( im ){
@@ -233,9 +264,8 @@ JS9.PanZoom.xsetwcsunits = function(did, id, target){
 	im.tmp.wcsunitsPanZoom = nwcsunits;
 	pos1 = JS9.PanZoom.getPos(im, "x");
 	pos2 = JS9.PanZoom.getPos(im, "y");
-	pel = $(target).parent();
-	pel.find("[name='pos1']").val(pos1);
-	pel.find("[name='pos2']").val(pos2);
+        panZoomSetInputValue(target, "pos1", pos1);
+        panZoomSetInputValue(target, "pos2", pos2);
 	if( im.getWCSSys() !== (im.tmp.wcssysPanZoom||owcssys) ){
 	    JS9.PanZoom.xsetwcssys(did, id, {value: im.getWCSSys()});
 	}
@@ -412,7 +442,7 @@ JS9.PanZoom.init = function(opts){
     };
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -436,7 +466,7 @@ JS9.PanZoom.init = function(opts){
     this.divjq.html("");
     this.lastTextWidth = 0;
     // set up new html
-    this.panzoomContainer = $("<div>")
+    this.panzoomContainer = panZoomWrap(document.createElement("div"))
 	.addClass(`${JS9.PanZoom.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)
@@ -478,10 +508,14 @@ JS9.PanZoom.init = function(opts){
     if( im ){
 	// init run on cr, if necessary
 	if( JS9.globalOpts.runOnCR ){
-	    this.panzoomContainer.find("[name='pos1']")
-		.data("enterfunc", "panto");
-	    this.panzoomContainer.find("[name='pos2']")
-		.data("enterfunc", "panto");
+            const pos1Input = this.div.querySelector("[name='pos1']");
+            const pos2Input = this.div.querySelector("[name='pos2']");
+            if( pos1Input ){
+                pos1Input.dataset.enterfunc = "panto";
+            }
+            if( pos2Input ){
+                pos2Input.dataset.enterfunc = "panto";
+            }
 	}
     }
 };

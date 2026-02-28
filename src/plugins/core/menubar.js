@@ -64,6 +64,86 @@ if( JS9.menuButtonOptsArr ){
 JS9.Menubar.EMPTYIMG = "data:image/svg+xml;base64,PHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxODYuMTIgMTcxLjkyIj48ZGVmcz48c3R5bGU+LmNscy0xe2ZpbGw6bm9uZTt9PC9zdHlsZT48L2RlZnM+PHRpdGxlPmVtcHR5PC90aXRsZT48cmVjdCBjbGFzcz0iY2xzLTEiIHdpZHRoPSIxODYuMTIiIGhlaWdodD0iMTcxLjkyIi8+PC9zdmc+";       // inline version of images/empty.svg
 
 JS9.Menubar.missing = {};
+JS9.Menubar.contextMenuApi = JS9.getDomAdapter();
+
+JS9.Menubar.getNode = function(selector){
+    return typeof selector === "string" ? document.querySelector(selector) : selector;
+};
+
+JS9.Menubar.hasNode = function(selector){
+    return !!JS9.Menubar.getNode(selector);
+};
+
+JS9.Menubar.openMenu = function(selector){
+    const node = JS9.Menubar.getNode(selector);
+    if( node && JS9.Menubar.contextMenuApi ){
+	JS9.Menubar.contextMenuApi.openRegisteredContextMenu(node);
+    }
+};
+
+JS9.Menubar.registerContextMenu = function(config){
+    return JS9.Menubar.contextMenuApi &&
+	JS9.Menubar.contextMenuApi.registerContextMenu(config);
+};
+
+JS9.Menubar.getInputValues = function(opt){
+    return JS9.Menubar.contextMenuApi &&
+	JS9.Menubar.contextMenuApi.getContextMenuValues(opt);
+};
+
+JS9.Menubar.setInputValues = function(opt, values){
+    return JS9.Menubar.contextMenuApi &&
+	JS9.Menubar.contextMenuApi.setContextMenuValues(opt, values);
+};
+
+JS9.Menubar.bindMenuTrigger = function(selector, handler){
+    const node = JS9.Menubar.getNode(selector);
+    if( !node ){
+	return;
+    }
+    node.addEventListener("mousedown", (evt) => {
+	evt.preventDefault();
+	handler(evt, node);
+    });
+};
+
+JS9.Menubar.setButtonContent = function(selector, value, isHtml){
+    const node = JS9.Menubar.getNode(selector);
+    if( !node ){
+	return;
+    }
+    if( isHtml ){
+	node.innerHTML = value;
+    } else {
+	node.textContent = value;
+    }
+};
+
+JS9.Menubar.clearHighlight = function(){
+    if( JS9.bugs.webkit_resize ){
+	document.querySelectorAll(".JS9 .JS9Image").forEach((node) => {
+	    node.classList.remove("JS9Highlight");
+	});
+    } else {
+	document.querySelectorAll(".JS9").forEach((node) => {
+	    node.classList.remove("JS9Highlight");
+	});
+    }
+};
+
+JS9.Menubar.highlightDisplay = function(display){
+    const baseNode = display && display.divjq ? display.divjq[0] || display.divjq : null;
+    if( !baseNode ){
+	return;
+    }
+    if( JS9.bugs.webkit_resize ){
+	baseNode.querySelectorAll(".JS9Image").forEach((node) => {
+	    node.classList.add("JS9Highlight");
+	});
+    } else if( baseNode.classList ){
+	baseNode.classList.add("JS9Highlight");
+    }
+};
 
 // return image unless its known to be missing ... then return empty image
 JS9.Menubar.menuImage = function(s){
@@ -97,7 +177,7 @@ JS9.Menubar.getDisplays = function(mode, key){
     if( this.id.search(JS9.SUPERMENU) >= 0 && !key.match(/^super_/) ){
 	if( mode !== "all" && this.selectedDisplay ){
 	    // make sure display still exists
-	    if( $.inArray(this.selectedDisplay, JS9.displays) >= 0 ){
+	    if( JS9.inArray(this.selectedDisplay, JS9.displays) >= 0 ){
 		return [this.selectedDisplay];
 	    }
 	    this.selectedDislay = null;
@@ -140,23 +220,15 @@ JS9.Menubar.onclick = function(disp){
     for(i=0; i<JS9.supermenus.length; i++){
 	supermenu = JS9.supermenus[i];
 	arr = JS9.Menubar.getDisplays.call(supermenu, "all");
-	if( ($.inArray(disp, arr) >= 0) || (disp === "all") ){
-	    if( JS9.bugs.webkit_resize ){
-		$(".JS9").find(".JS9Image").removeClass("JS9Highlight");
-	    } else {
-		$(".JS9").removeClass("JS9Highlight");
-	    }
+	if( (JS9.inArray(disp, arr) >= 0) || (disp === "all") ){
+	    JS9.Menubar.clearHighlight();
 	    if( (disp === supermenu.selectedDisplay) || (disp === "all") ){
 		// unselect
 		supermenu.selectedDisplay = null;
 	    } else {
 		// select
 		supermenu.selectedDisplay = disp;
-		if( JS9.bugs.webkit_resize ){
-		    $(disp.divjq).find(".JS9Image").addClass("JS9Highlight");
-		} else {
-		    $(disp.divjq).addClass("JS9Highlight");
-		}
+		JS9.Menubar.highlightDisplay(disp);
 	    }
 	}
     }
@@ -176,16 +248,16 @@ JS9.Menubar.createMenus = function(){
     const mypos = (opt,  x,  y) => {
 	let pos;
 	if( !{}.hasOwnProperty.call(window, "Jupyter") ){
-	    opt.$menu.position({
+	    opt.menu.position({
 		my:  'left top',
 		at:  JS9.globalOpts.menuPosition || "left bottom",
-		of:  opt.$trigger,
+		of:  opt.trigger,
 		collision: "fit"
 	    });
 	} else {
-	    // Jupyter gets the wrong position when using $trigger ...
-	    pos = opt.$trigger.offset();
-	    opt.$menu.css({"left": pos.left+20, "top": pos.top+10});
+	    // Jupyter gets the wrong position when using the wrapped trigger ...
+	    pos = opt.trigger.offset();
+	    opt.menu.css({"left": pos.left+20, "top": pos.top+10});
 	}
     };
     const onhide = () => {
@@ -204,7 +276,7 @@ JS9.Menubar.createMenus = function(){
 	    for( key of Object.keys(gkeyActions) ){
 		JS9.Menubar.rkeyMap[gkeyActions[key]] = key;
 	    }
-	    JS9.Menubar.keyActions = $.extend(true, {}, gkeyActions);
+	    JS9.Menubar.keyActions = JS9.extend(true, {}, gkeyActions);
 	}
 	if( JS9.notNull(act) && JS9.Menubar.rkeyMap ){
 	    key = JS9.Menubar.rkeyMap[act];
@@ -228,14 +300,14 @@ JS9.Menubar.createMenus = function(){
     const xeqUserMenu = (evt) => {
 	const menu = evt.data;
 	evt.preventDefault();
-	$(`#${menu.name}UserMenu${this.id}`).contextMenu();
+	JS9.Menubar.openMenu(`#${menu.name}UserMenu${this.id}`);
     };
     const addUserMenu = (menu) => {
 	if( !menu || !menu.name || !menu.title || !menu.options  ){
 	    return;
 	}
 	// define contextMenu actions
-	$.contextMenu({
+	JS9.Menubar.registerContextMenu({
             selector: `#${menu.name }UserMenu${this.id}`,
 	    zIndex: JS9.MENUZINDEX,
 	    events: { hide: onhide },
@@ -287,7 +359,7 @@ JS9.Menubar.createMenus = function(){
 				    } else if( menu.updateTitle === "image" ){
 					hstr = `<div style='white-space:nowrap;'><img src='${opt.image}' name='${menu.name}' alt='${opt.name}' class='JS9MenubarUserImage JS9MenubarUserImageTitle' ></div>`;
 				    }
-				    $(kopt.selector).html(hstr);
+				    JS9.Menubar.setButtonContent(kopt.selector, hstr, true);
 				} else if( typeof menu.updateTitle === "function" ){
 				    try{
 					s = menu.updateTitle(udisp.image,
@@ -295,9 +367,9 @@ JS9.Menubar.createMenus = function(){
 							     opt.name);
 				    }
 				    catch(e){ s = (opt.name || menu.name); }
-				    $(kopt.selector).text(s);
+				    JS9.Menubar.setButtonContent(kopt.selector, s, false);
 				} else if( menu.updateTitle && opt.name ){
-				    $(kopt.selector).text(opt.name);
+				    JS9.Menubar.setButtonContent(kopt.selector, opt.name, false);
 				}
 				}
 			    } else {
@@ -319,18 +391,18 @@ JS9.Menubar.createMenus = function(){
 		if( !menu || !menu.name || !menu.title  ){
 		    continue;
 		}
-		$(`#${menu.name}UserMenu${this.id}`).on("mousedown",
-							 menu, xeqUserMenu);
+		JS9.Menubar.bindMenuTrigger(`#${menu.name}UserMenu${this.id}`,
+					    (evt) => xeqUserMenu({preventDefault: () => evt.preventDefault(),
+								  data: menu}));
 		addUserMenu(menu);
 	    }
 	}
     };
     // File menu: make button open the contextMenu
-    $(`#fileMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#fileMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#fileMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#fileMenu${this.id}`);
     });
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#fileMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -459,7 +531,7 @@ JS9.Menubar.createMenus = function(){
 	    if( tim ){
 		items.moveto.disabled = false;
 		for(i=0; i<JS9.displays.length; i++){
-		    if( $(`#${JS9.displays[i].id}`).length > 0 &&
+		    if( JS9.Menubar.hasNode(`#${JS9.displays[i].id}`) &&
 			tdisp !== JS9.displays[i]    	     ){
 			s1 = `moveto_${JS9.displays[i].id}`;
 			items.moveto.items[s1] = xname(JS9.displays[i].id);
@@ -668,7 +740,7 @@ JS9.Menubar.createMenus = function(){
 			let j, s, t, kid, unew, uim;
 			const udisp = val;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			if( udisp ){
@@ -946,12 +1018,11 @@ JS9.Menubar.createMenus = function(){
             }
     });
     // Edit menu: make button open the contextMenu
-    $(`#editMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#editMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#editMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#editMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#editMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -984,7 +1055,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			switch(key){
@@ -1046,12 +1117,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // ViewMac menu: make button open the contextMenu
-    $(`#viewMacMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#viewMacMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#viewMacMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#viewMacMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#viewMacMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -1073,7 +1143,7 @@ JS9.Menubar.createMenus = function(){
 		callback: (key) => {
 		    switch(key){
 		    default:
-			$(`#${key}Menu${this.id}`).contextMenu();
+			JS9.Menubar.openMenu(`#${key}Menu${this.id}`);
 			break;
 		    }
 		},
@@ -1082,12 +1152,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // View menu: make button open the contextMenu
-    $(`#viewMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#viewMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#viewMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#viewMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#viewMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -1111,11 +1180,11 @@ JS9.Menubar.createMenus = function(){
 	    }
 	    const keyValposColor = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -1163,11 +1232,11 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyResize = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -1333,7 +1402,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			switch(key){
@@ -1424,7 +1493,7 @@ JS9.Menubar.createMenus = function(){
 			    obj.resize = sprintf("%d %d",
 						 udisp.width, udisp.height);
 			    obj.valposcolor = JS9.textColorOpts.info;
-			    $.contextMenu.setInputValues(opt, obj);
+			    JS9.Menubar.setInputValues(opt, obj);
 			    JS9.jupyterFocus(".context-menu-item");
 			}
 		    },
@@ -1434,7 +1503,7 @@ JS9.Menubar.createMenus = function(){
 			if( udisp ){
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editResize(udisp, obj);
 			    }
 			}
@@ -1445,12 +1514,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Zoom menu: make button open the contextMenu
-    $(`#zoomMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#zoomMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#zoomMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#zoomMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#zoomMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -1478,12 +1546,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyZoom = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -1501,12 +1569,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyRotate = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -1694,7 +1762,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			if( uim ){
@@ -1767,7 +1835,7 @@ JS9.Menubar.createMenus = function(){
 			    obj.rotate =
 				JS9.floatToString(uim.params.rotate||0);
 			}
-			$.contextMenu.setInputValues(opt, obj);
+			JS9.Menubar.setInputValues(opt, obj);
 			JS9.jupyterFocus(".context-menu-item");
 		    },
 		    hide: (opt) => {
@@ -1777,11 +1845,11 @@ JS9.Menubar.createMenus = function(){
 			if( uim ){
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editZoom(uim, obj);
 			    }
 			    if( udisp.tmp.editingMenu2 ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editRotate(uim, obj);
 			    }
 			}
@@ -1792,12 +1860,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Scale menu: make button open the contextMenu
-    $(`#scaleMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#scaleMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#scaleMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#scaleMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#scaleMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -1824,12 +1891,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyScale = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -1911,7 +1978,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			if( uim ){
@@ -1942,7 +2009,7 @@ JS9.Menubar.createMenus = function(){
 			    obj.scalemax =
 				JS9.floatToString(uim.params.scalemax);
 			}
-			$.contextMenu.setInputValues(opt, obj);
+			JS9.Menubar.setInputValues(opt, obj);
 			JS9.jupyterFocus(".context-menu-item");
 		    },
 		    hide: (opt) => {
@@ -1952,7 +2019,7 @@ JS9.Menubar.createMenus = function(){
 			if( uim ){
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editScale(uim, obj);
 			    }
 			}
@@ -1963,12 +2030,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Color menu: make button open the contextMenu
-    $(`#colorMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#colorMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#colorMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#colorMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#colorMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -1997,12 +2063,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyColor = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -2124,7 +2190,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			switch(key){
@@ -2168,7 +2234,7 @@ JS9.Menubar.createMenus = function(){
 			    obj.sigma =
 				JS9.floatToString(uim.params.sigma);
 			}
-			$.contextMenu.setInputValues(opt, obj);
+			JS9.Menubar.setInputValues(opt, obj);
 			JS9.jupyterFocus(".context-menu-item");
 		    },
 		    hide: (opt) => {
@@ -2178,7 +2244,7 @@ JS9.Menubar.createMenus = function(){
 			if( uim ){
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editColor(uim, obj);
 			    }
 			}
@@ -2189,12 +2255,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Region menu: make button open the contextMenu
-    $(`#regionMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#regionMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#regionMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#regionMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#regionMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -2358,7 +2423,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			if( uim ){
@@ -2439,7 +2504,7 @@ JS9.Menubar.createMenus = function(){
 		events: {
 		    show: (opt) => {
 			const obj = {color: ""};
-			$.contextMenu.setInputValues(opt, obj);
+			JS9.Menubar.setInputValues(opt, obj);
 			JS9.jupyterFocus(".context-menu-item");
 		    },
 		    hide: (opt) => {
@@ -2448,7 +2513,7 @@ JS9.Menubar.createMenus = function(){
 			const uim = udisp.image;
 			if( uim ){
 			    // if a key was pressed, do the edit
-			    obj = $.contextMenu.getInputValues(opt);
+			    obj = JS9.Menubar.getInputValues(opt);
 			    editRegions(uim, obj);
 			}
 		    }
@@ -2458,12 +2523,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // WCS menu: make button open the contextMenu
-    $(`#wcsMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#wcsMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#wcsMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#wcsMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#wcsMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -2482,12 +2546,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyRotate = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -2657,7 +2721,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			if( uim ){
@@ -2711,7 +2775,7 @@ JS9.Menubar.createMenus = function(){
 			const obj = {};
 			if( uim ){
 			    obj.rot = "";
-			    $.contextMenu.setInputValues(opt, obj);
+			    JS9.Menubar.setInputValues(opt, obj);
 			    JS9.jupyterFocus(".context-menu-item");
 			}
 		    },
@@ -2720,7 +2784,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = this.display;
 			const uim = udisp.image;
 			if( uim ){
-			    obj = $.contextMenu.getInputValues(opt);
+			    obj = JS9.Menubar.getInputValues(opt);
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
 				editRotate(uim, obj);
@@ -2733,12 +2797,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Analysis menu: make button open the contextMenu
-    $(`#analysisMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#analysisMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#analysisMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#analysisMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#analysisMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -2764,12 +2827,12 @@ JS9.Menubar.createMenus = function(){
 	    };
 	    const keyAnalysis = (e) => {
 		JS9.Menubar.getDisplays.call(this).forEach((val) => {
-		    const obj = $.contextMenu.getInputValues(e.data);
+		    const obj = JS9.Menubar.getInputValues(e.data);
 		    const keycode = e.which || e.keyCode;
 		    const vdisp = val;
 		    const vim = vdisp.image;
 		    // make sure display is still valid
-		    if( $.inArray(vdisp, JS9.displays) < 0 ){
+		    if( JS9.inArray(vdisp, JS9.displays) < 0 ){
 			return;
 		    }
 		    switch( keycode ){
@@ -2922,7 +2985,7 @@ JS9.Menubar.createMenus = function(){
 			const udisp = val;
 			const uim = udisp.image;
 			// make sure display is still valid
-			if( $.inArray(udisp, JS9.displays) < 0 ){
+			if( JS9.inArray(udisp, JS9.displays) < 0 ){
 			    return;
 			}
 			// first look for a plugin -- no image rquired
@@ -2958,31 +3021,41 @@ JS9.Menubar.createMenus = function(){
 				break;
 			    case "dpath":
 				// call this once window is loaded
-			        $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-				    .arrive("#dataPathForm",
-					    {onceOnly: true}, () => {
-						$('#dataPath').val(JS9.globalOpts.dataPath);
-					    });
+				JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+						       "#dataPathForm",
+						       () => {
+							   const input = JS9.resolveNode("#dataPath");
+							   if( input ){
+							       input.value = JS9.globalOpts.dataPath;
+							   }
+						       });
 				did = uim.displayAnalysis("textline",
 					  JS9.InstallDir(JS9.analOpts.dpathURL),
 					  {title: "Data path for analysis"});
 				// save display id
-				$(did).data("dispid", udisp.id);
-				$(did).data("imid", uim.id);
+				if( JS9.resolveNode(did) ){
+				    JS9.resolveNode(did).dataset.dispid = udisp.id;
+				    JS9.resolveNode(did).dataset.imid = uim.id;
+				}
 				break;
 			    case "fpath":
 				// call this once window is loaded
-			        $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-				    .arrive("#filePathForm",
-					    {onceOnly: true}, () => {
-						$('#filePath').val(uim.file);
-					    });
+				JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+						       "#filePathForm",
+						       () => {
+							   const input = JS9.resolveNode("#filePath");
+							   if( input ){
+							       input.value = uim.file;
+							   }
+						       });
 				did = uim.displayAnalysis("textline",
 					  JS9.InstallDir(JS9.analOpts.fpathURL),
 					  {title: "File path for this image"});
 				// save display id
-				$(did).data("dispid", udisp.id);
-				$(did).data("imid", uim.id);
+				if( JS9.resolveNode(did) ){
+				    JS9.resolveNode(did).dataset.dispid = udisp.id;
+				    JS9.resolveNode(did).dataset.imid = uim.id;
+				}
 				break;
 			    case "grid":
 				uim.displayCoordGrid(!uim.displayCoordGrid());
@@ -3002,8 +3075,10 @@ JS9.Menubar.createMenus = function(){
 								  {title: `${a.title}: ${uim.fitsFile}`,
 								   winformat: a.pwin});
 					// save info for running the task
-					$(did).data("dispid", udisp.id)
-				            .data("aname", a.name);
+					if( JS9.resolveNode(did) ){
+					    JS9.resolveNode(did).dataset.dispid = udisp.id;
+					    JS9.resolveNode(did).dataset.aname = a.name;
+					}
 				    } else {
 					// else run task directly
 					uim.runAnalysis(a.name);
@@ -3022,7 +3097,7 @@ JS9.Menubar.createMenus = function(){
 			if( uim  ){
 			    obj.sigma = JS9.floatToString(uim.params.sigma);
 			}
-			$.contextMenu.setInputValues(opt, obj);
+			JS9.Menubar.setInputValues(opt, obj);
 			JS9.jupyterFocus(".context-menu-item");
 		    },
 		    hide: (opt) => {
@@ -3032,7 +3107,7 @@ JS9.Menubar.createMenus = function(){
 			if( uim ){
 			    // if a key was pressed, do the edit
 			    if( udisp.tmp.editingMenu ){
-				obj = $.contextMenu.getInputValues(opt);
+				obj = JS9.Menubar.getInputValues(opt);
 				editAnalysis(uim, obj);
 			    }
 			}
@@ -3043,12 +3118,11 @@ JS9.Menubar.createMenus = function(){
 	}
     });
     // Help menu: make button open the contextMenu
-    $(`#helpMenu${this.id}`).on("mousedown", (evt) => {
-        evt.preventDefault();
-        $(`#helpMenu${this.id}`).contextMenu();
+    JS9.Menubar.bindMenuTrigger(`#helpMenu${this.id}`, () => {
+	JS9.Menubar.openMenu(`#helpMenu${this.id}`);
     });
     // define contextMenu actions
-    $.contextMenu({
+    JS9.Menubar.registerContextMenu({
         selector: `#helpMenu${this.id}`,
 	zIndex: JS9.MENUZINDEX,
 	events: { hide: onhide },
@@ -3257,15 +3331,19 @@ JS9.Menubar.init = function(width, height){
     // define menubar
     this.html = html.replace(/@@ID@@/g,this.id);
     // add container to the high-level div
-    this.menuConjq = $("<div>")
-	.addClass(this.containerClass)
-	.attr("width", this.width)
-	.attr("height", this.height)
-	.html(this.html)
-	.appendTo(this.divjq);
+    this.menuConjq = document.createElement("div");
+    this.menuConjq.className = this.containerClass;
+    this.menuConjq.setAttribute("width", String(this.width));
+    this.menuConjq.setAttribute("height", String(this.height));
+    this.menuConjq.innerHTML = this.html;
+    this.div.appendChild(this.menuConjq);
+    if( !Number.isFinite(this.height) && this.menuConjq ){
+	this.height = this.menuConjq.offsetHeight || this.div.offsetHeight || 0;
+	this.menuConjq.setAttribute("height", String(this.height));
+    }
     // menubar background color
     if( this.backgroundColor ){
-	this.menuConjq.css("background", this.backgroundColor);
+	this.menuConjq.style.background = this.backgroundColor;
     }
     // create the standard menus
     JS9.Menubar.createMenus.call(this);
@@ -3275,4 +3353,3 @@ JS9.RegisterPlugin("JS9", "Menubar", JS9.Menubar.init,
 		   {onupdateprefs: JS9.Menubar.reset,
 		    dynamicSelect: true,
 		    winDims: [JS9.Menubar.WIDTH, JS9.Menubar.HEIGHT]});
-

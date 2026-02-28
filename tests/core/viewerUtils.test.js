@@ -86,4 +86,73 @@ describe("JS9InstallViewerUtils", () => {
     expect(JS9.localAccess("x.txt")).toBeNull();
     expect(JS9.localAccess(null)).toBeNull();
   });
+
+  it("formats and clears tooltip content without wrapped collections", () => {
+    const JS9 = installViewerUtils();
+    const tooltip = {
+      nodeType: 1,
+      innerHTML: "",
+      style: {},
+      offsetWidth: 80,
+      offsetHeight: 20,
+      getBoundingClientRect() {
+        return { width: 80, height: 20 };
+      }
+    };
+    const im = {
+      id: "im1",
+      display: {
+        width: 200,
+        height: 120,
+        tooltip
+      }
+    };
+    const xreg = {
+      data: {
+        tag: "region-1"
+      }
+    };
+
+    JS9.tooltip(190, 110, "$im.id:$data.tag", im, xreg, {});
+
+    expect(tooltip.innerHTML).toBe("im1:region-1");
+    expect(tooltip.style.display).toBe("inline-block");
+    expect(tooltip.style.left).toBe("110px");
+    expect(tooltip.style.top).toBe("90px");
+
+    JS9.tooltip(10, 10, "", im, xreg, {});
+
+    expect(tooltip.innerHTML).toBe("");
+    expect(tooltip.style.left).toBe("-9999px");
+    expect(tooltip.style.display).toBe("none");
+  });
+
+  it("supports tooltip nodes wrapped in array-like objects", () => {
+    const JS9 = installViewerUtils();
+    const tooltip = {
+      nodeType: 1,
+      innerHTML: "",
+      style: {},
+      offsetWidth: 40,
+      offsetHeight: 10,
+      getBoundingClientRect() {
+        return { width: 40, height: 10 };
+      }
+    };
+    const im = {
+      display: {
+        width: 100,
+        height: 80,
+        tooltip: {
+          0: tooltip,
+          length: 1
+        }
+      }
+    };
+
+    JS9.tooltip(5, 5, "hello", im, { data: {} }, {});
+
+    expect(tooltip.innerHTML).toBe("hello");
+    expect(tooltip.style.display).toBe("inline-block");
+  });
 });

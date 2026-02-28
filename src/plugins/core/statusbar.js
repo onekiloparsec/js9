@@ -2,7 +2,7 @@
  * status plugin (February 20, 2020)
  */
 
-/*global $, JS9 */
+/*global JS9 */
 
 "use strict";
 
@@ -16,32 +16,37 @@ JS9.Statusbar.COLORWIDTH =  120;  // width of colorbar, if present
 JS9.Statusbar.COLORHEIGHT = 14;   // height of colorbar, if present
 JS9.Statusbar.BASE = JS9.Statusbar.CLASS + JS9.Statusbar.NAME;
 
+JS9.Statusbar.setHighlightClass = function(target, className){
+    if( !target || !target.classList ){
+	return;
+    }
+    target.classList.remove("JS9StatusbarItemNoHighlight",
+			    "JS9StatusbarItemHighlight",
+			    "JS9StatusbarItemHighlight2");
+    target.classList.add(className);
+};
+
 // mouse over: highlight a bit
 JS9.Statusbar.mover = function(target){
-    $(target).removeClass("JS9StatusbarItemNoHighlight JS9StatusbarItemHighlight2");
-    $(target).addClass("JS9StatusbarItemHighlight");
+    JS9.Statusbar.setHighlightClass(target, "JS9StatusbarItemHighlight");
 };
 
 // mouse out: no highlight
 JS9.Statusbar.mout = function(target){
-    $(target).removeClass("JS9StatusbarItemHighlight JS9StatusbarItemHighlight2");
-    $(target).addClass("JS9StatusbarItemNoHighlight");
+    JS9.Statusbar.setHighlightClass(target, "JS9StatusbarItemNoHighlight");
 };
 
 // mouse down: hightlight fully
 JS9.Statusbar.mdown = function(target){
-    // unhighlight
-    $(target).removeClass("JS9StatusbarItemNoHighlight JS9StatusbarItemHighlight");
-    $(target).addClass("JS9StatusbarItemHighlight2");
+    JS9.Statusbar.setHighlightClass(target, "JS9StatusbarItemHighlight2");
 };
 
 // mouse up: xeq action, hightlight a bit
 JS9.Statusbar.mup = function(target, id){
     let s, arr;
-    $(target).removeClass("JS9StatusbarItemNoHighlight JS9StatusbarItemHighlight2");
-    $(target).addClass("JS9StatusbarItemHighlight");
+    JS9.Statusbar.setHighlightClass(target, "JS9StatusbarItemHighlight");
     // look at the html for this element
-    s = $(target).attr("name");
+    s = target ? target.getAttribute("name") : null;
     if( s ){
 	// is there a hint about what sort of menu status it contains?
 	arr = s.match(/file|image|edit|view|zoom|rot|flip|scale|color|regions|wcs|analysis|mag/i);
@@ -117,7 +122,7 @@ JS9.Statusbar.display = function(im, opts){
 		html += t;
 	    }
 	    // set statusbar
-	    this.statusContainer.html(html);
+	    this.statusContainer.innerHTML = html;
 	    // colorbar plugin: run AddDivs, remove colorbar from resize list
 	    if( statusbar.match(/\$colorbar/) ){
 		JS9.AddDivs({display: im});
@@ -131,7 +136,7 @@ JS9.Statusbar.display = function(im, opts){
 	    this.statusBar = statusbar;
 	} else {
 	    // elements associated with items in statusbar
-	    elements = this.divjq.find(`.JS9StatusbarItem`);
+	    elements = this.div.querySelectorAll(".JS9StatusbarItem");
 	    arr = s.split(delim);
 	    // for each element ...
 	    for(i=0; i<elements.length; i++){
@@ -148,11 +153,11 @@ JS9.Statusbar.display = function(im, opts){
 			if( t[1].charAt(0) !== "/" ){
 			    t[1] = JS9.InstallDir(t[1]);
 			}
-			$(elements[i]).find("img").attr("src", t[1]);
+			elements[i].querySelector("img").setAttribute("src", t[1]);
 		    }
 		} else {
 		    // set new value
-		    $(elements[i]).html(arr[i]);
+		    elements[i].innerHTML = arr[i];
 		}
 	    }
 	}
@@ -160,10 +165,10 @@ JS9.Statusbar.display = function(im, opts){
 	// clear statusbar but leave it intact
 	if( this.statusBar ){
 	    arr = this.statusBar.split(delim);
-	    elements = this.divjq.find(`.JS9StatusbarItem`);
+	    elements = this.div.querySelectorAll(".JS9StatusbarItem");
 	    for(i=0; i<elements.length; i++){
 		if( !arr[i].match(/\$colorbar/) ){
-		    $(elements[i]).html("");
+		    elements[i].innerHTML = "";
 		}
 	    }
 	}
@@ -175,7 +180,7 @@ JS9.Statusbar.display = function(im, opts){
 JS9.Statusbar.init = function(width, height){
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id of the div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -199,14 +204,14 @@ JS9.Statusbar.init = function(width, height){
     this.colorheight = parseInt(this.divjq.attr("data-colorbarHeight"), 10) ||
 	JS9.Statusbar.COLORHEIGHT;
     // clean plugin container
-    this.divjq.html("");
+    this.div.innerHTML = "";
     // status container
-    this.statusContainer = $("<div>")
-	.addClass(`${JS9.Statusbar.BASE}Container`)
-	.attr("id", `${this.id}Container`)
-        .attr("width", this.width)
-        .attr("height", this.height)
-	.appendTo(this.divjq);
+    this.statusContainer = document.createElement("div");
+    this.statusContainer.className = `${JS9.Statusbar.BASE}Container`;
+    this.statusContainer.id = `${this.id}Container`;
+    this.statusContainer.setAttribute("width", String(this.width));
+    this.statusContainer.setAttribute("height", String(this.height));
+    this.div.appendChild(this.statusContainer);
     // display current status, if necessary
     if( this.display.image ){
 	JS9.Statusbar.display.call(this, this.display.image);

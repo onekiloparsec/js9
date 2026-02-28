@@ -3,9 +3,13 @@
  * user interface for virtual sync plugin
  */
 
-/*global JS9, $, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapSyncUiTarget = function(value){
+    return JS9.wrapCollection(value);
+};
 
 JS9.SyncUI = {};
 JS9.SyncUI.CLASS = "JS9";     // class of plugins (1st part of div class)
@@ -51,33 +55,28 @@ JS9.SyncUI.onceHTML='<span class="JS9SyncUIButton"><input type="button" class="J
 JS9.SyncUI.unsyncHTML='<span class="JS9SyncUIButton"><input type="button" class="JS9RunButton JS9SyncUIButton" id="active" name="unsync" value="Unsync" onclick="javascript:JS9.SyncUI.xunsync(\'%s\', this)"></span>';
 
 
-JS9.SyncUI.getImsOpsOpts = function(el){
-    const container = el.closest(".JS9SyncUIContainer");
+JS9.SyncUI.getImsOpsOpts = function(target){
+    const node = JS9.resolveNode(target);
     const ops = [];
     const ims = [];
     const opts = {};
-    if( container.length ){
+    const container = node ? node.closest(".JS9SyncUIContainer") : null;
+    if( container ){
 	// gather all selected images
-	container.find(".JS9SyncUIImCheck").each((index, element) => {
-	    let name = $(element).prop("name");
-	    let checked = $(element).prop("checked");
-	    if( checked ){
-		ims.push(name);
+	container.querySelectorAll(".JS9SyncUIImCheck").forEach((element) => {
+	    if( element.checked ){
+		ims.push(element.name);
 	    }
 	});
 	// gather all selected ops
-	container.find(".JS9SyncUIOpCheck").each((index, element) => {
-	    let name = $(element).prop("name");
-	    let checked = $(element).prop("checked");
-	    if( checked ){
-		ops.push(name);
+	container.querySelectorAll(".JS9SyncUIOpCheck").forEach((element) => {
+	    if( element.checked ){
+		ops.push(element.name);
 	    }
 	});
 	// get opts
-	container.find(".JS9SyncUIOptsCheck").each((index, element) => {
-	    let name = $(element).prop("name");
-	    let checked = $(element).prop("checked");
-	    opts[name] = checked;
+	container.querySelectorAll(".JS9SyncUIOptsCheck").forEach((element) => {
+	    opts[element.name] = !!element.checked;
 	});
     }
     return {ims, ops, opts};
@@ -103,7 +102,7 @@ JS9.SyncUI.xsync = function(did, target){
     if( display.image ){
 	im = display.image;
 	// get ims and opts
-	const {ims, ops, opts} = JS9.SyncUI.getImsOpsOpts($(target));
+	const {ims, ops, opts} = JS9.SyncUI.getImsOpsOpts(target);
 	// sync images, if necessary
 	if( ims.length && ops.length ){
 	    im.syncImages(ops, ims, opts);
@@ -119,7 +118,7 @@ JS9.SyncUI.xonce = function(did, target){
     if( display.image ){
 	im = display.image;
 	// get ims and opts
-	const {ims, ops} = JS9.SyncUI.getImsOpsOpts($(target));
+	const {ims, ops} = JS9.SyncUI.getImsOpsOpts(target);
 	// copy params, if necessary
 	if( ims.length && ops.length ){
 	    im.copyParams(ops, ims);
@@ -135,7 +134,7 @@ JS9.SyncUI.xunsync = function(did, target){
     if( display.image ){
 	im = display.image;
 	// get ims and opts
-	const {ims, ops, opts} = JS9.SyncUI.getImsOpsOpts($(target));
+	const {ims, ops, opts} = JS9.SyncUI.getImsOpsOpts(target);
 	// unsync images, if necessary
 	if( ims.length && ops.length ){
 	    im.unsyncImages(ops, ims, opts);
@@ -149,7 +148,7 @@ JS9.SyncUI.xrecip = function(did, target){
     const display = JS9.getDynamicDisplayOr(JS9.lookupDisplay(did));
     if( display ){
 	pinst = display.pluginInstances.JS9SyncUI;
-	pinst.syncReciprocate = $(target).is(':checked');
+	pinst.syncReciprocate = !!(target && target.checked);
     }
 };
 
@@ -158,7 +157,7 @@ JS9.SyncUI.xsyncwcs = function(did, target){
     const display = JS9.getDynamicDisplayOr(JS9.lookupDisplay(did));
     if( display ){
 	pinst = display.pluginInstances.JS9SyncUI;
-	pinst.syncWCS = $(target).is(':checked');
+	pinst.syncWCS = !!(target && target.checked);
     }
 };
 
@@ -188,7 +187,7 @@ JS9.SyncUI.setCheckboxes = function(im){
 	for(i=0; i<syncops.length; i++){
 	    // get the op
 	    op = syncops[i];
-	    if( $.isArray(im.syncs[op]) ){
+	    if( JS9.isArray(im.syncs[op]) ){
 		// turn on the checkbox associated with this op
 		pinst.syncContainer
 		    .find(".JS9SyncUIOpCheck")
@@ -197,7 +196,7 @@ JS9.SyncUI.setCheckboxes = function(im){
 		// for each file associated with the sync'ed op
 		for(j=0; j<im.syncs[op].length; j++){
 		    if( JS9.isImage(im.syncs[op][j]) ){
-			// jquery doesn't like brackets in names
+			// selector parsing is easier if brackets are escaped in names
 			id = im.syncs[op][j].id.replace(/\[.*\]/, "");
 			// turn on the checkbox associated with this file
 			pinst.syncContainer
@@ -279,7 +278,10 @@ JS9.SyncUI.removeImage = function(im){
     let id;
     if( im ){
 	id = JS9.SyncUI.imid(im);
-	$(`#${id}`).remove();
+	const node = document.getElementById(id);
+	if( node ){
+	    node.remove();
+	}
 	this.syncImageDivs--;
 	if( !this.syncImageDivs ){
 	    this.syncImageContainer.html("");
@@ -294,7 +296,7 @@ JS9.SyncUI.init = function(){
     let i, j, s, im, op, dispid, imhead, ophead, opts, nrow, idx, syncops, html;
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -330,20 +332,23 @@ JS9.SyncUI.init = function(){
 			 `Images that can be synced`);
     }
     // main container
-    this.syncContainer = $("<div>")
+    this.syncContainer = wrapSyncUiTarget(document.createElement("div"));
+    this.syncContainer
 	.addClass(`${JS9.SyncUI.BASE}Container`)
 	.attr("id", `${this.id}SyncContainer`)
         .css("overflow", "auto")
 	.appendTo(this.divjq);
     s = JS9.Image.prototype.expandMacro.call(null, JS9.SyncUI.headerHTML);
     // header
-    this.syncHeader = $("<div>")
+    this.syncHeader = wrapSyncUiTarget(document.createElement("div"));
+    this.syncHeader
 	.addClass(`${JS9.SyncUI.BASE}Header`)
 	.attr("id", `${dispid}Header`)
 	.html(s)
 	.appendTo(this.syncContainer);
     // container to hold images
-    this.syncImageContainer = $("<div>")
+    this.syncImageContainer = wrapSyncUiTarget(document.createElement("div"));
+    this.syncImageContainer
 	.addClass(`${JS9.SyncUI.BASE}ImageContainer`)
 	.attr("id", `${this.id}SyncImageContainer`)
 	.html(imhead)
@@ -366,7 +371,8 @@ JS9.SyncUI.init = function(){
     // give the hint to generate one long html string and add all the spans
     // at once, which seems to work properly.
     // container to hold ops
-    this.syncOpContainer = $("<div>")
+    this.syncOpContainer = wrapSyncUiTarget(document.createElement("div"));
+    this.syncOpContainer
 	.addClass(`${JS9.SyncUI.BASE}OpContainer`)
 	.attr("id", `${this.id}SyncOpContainer`)
         .html(sprintf(JS9.SyncUI.HEADER, "Operations that can be synced"))
@@ -388,7 +394,8 @@ JS9.SyncUI.init = function(){
     // options
     // container to hold images
     ophead = sprintf(JS9.SyncUI.HEADER, `Sync options`);
-    this.syncOptsContainer = $("<div>")
+    this.syncOptsContainer = wrapSyncUiTarget(document.createElement("div"));
+    this.syncOptsContainer
 	.addClass(`${JS9.SyncUI.BASE}OptsContainer`)
 	.attr("id", `${this.id}SyncOptsContainer`)
 	.html(ophead)
@@ -398,7 +405,8 @@ JS9.SyncUI.init = function(){
     opts.push({name: "syncwcs", value: sprintf(JS9.SyncUI.syncwcsHTML, JS9.SyncUI.COLWIDTH * 1, "syncwcs", dispid, "sync using wcs")});
     s = JS9.Image.prototype.expandMacro.call(null, JS9.SyncUI.optsHTML, opts);
     // footer
-    this.syncOpts = $("<div>")
+    this.syncOpts = wrapSyncUiTarget(document.createElement("div"));
+    this.syncOpts
 	.attr("id", `${dispid}Opts`)
 	.html(s)
 	.appendTo(this.syncOptsContainer);
@@ -411,7 +419,8 @@ JS9.SyncUI.init = function(){
     opts.push({name: "unsync", value: sprintf(JS9.SyncUI.unsyncHTML, dispid)});
     s = JS9.Image.prototype.expandMacro.call(null, JS9.SyncUI.footerHTML, opts);
     // footer
-    this.syncFooter = $("<div>")
+    this.syncFooter = wrapSyncUiTarget(document.createElement("div"));
+    this.syncFooter
 	.addClass(`${JS9.SyncUI.BASE}Footer`)
 	.attr("id", `${dispid}Footer`)
 	.html(s)

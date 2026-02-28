@@ -2,9 +2,13 @@
  * imarith plugin (March 8, 2016)
  */
 
-/*global $, JS9, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const imarithWrap = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Imarith = {};
@@ -46,9 +50,13 @@ JS9.Imarith.xarg1 = function(did, id, target){
     if( im && arg1 ){
 	im.display.pluginInstances.JS9Imarith.arg1 = arg1;
 	if( arg1 === "num" ){
-	    $(".JS9ImarithNum").css("visibility", "visible");
+            document.querySelectorAll(".JS9ImarithNum").forEach((node) => {
+                node.style.visibility = "visible";
+            });
 	} else {
-	    $(".JS9ImarithNum").css("visibility", "hidden");
+            document.querySelectorAll(".JS9ImarithNum").forEach((node) => {
+                node.style.visibility = "hidden";
+            });
 	}
     }
 };
@@ -130,7 +138,7 @@ JS9.Imarith.init = function(opts){
     let images = "";
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped collection representing the div for this plugin
     // this.id:       the id ofthe div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -200,7 +208,7 @@ JS9.Imarith.init = function(opts){
     // clear out old html
     this.divjq.html("");
     // set up new html
-    this.imarithContainer = $("<div>")
+    this.imarithContainer = imarithWrap(document.createElement("div"))
 	.addClass(`${JS9.Imarith.BASE}Container`)
 	.attr("id", `${this.id}Container`)
         .attr("width", this.width)

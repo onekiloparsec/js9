@@ -1,6 +1,6 @@
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
 
-/*global JS9Prefs, JS9Inline, CoreBasicUtils, JS9MathUtils, JS9InstallFITSRuntime, JS9InstallViewerUtils, JS9InstallViewerEvents, JS9InstallViewerPlugins, JS9InstallFITSBootstrap, JS9InstallColormaps, JS9InstallCommands, JS9InstallHelperRuntime, JS9InstallShapeEngine, JS9InstallFabricEngine, JS9InstallInitAnalysis, JS9InstallPublicApi, JS9InstallViewerInit, $, fabric, io, sprintf, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
+/*global JS9Prefs, JS9Inline, CoreBasicUtils, JS9MathUtils, JS9InstallFITSRuntime, JS9InstallViewerUtils, JS9InstallViewerEvents, JS9InstallViewerPlugins, JS9InstallFITSBootstrap, JS9InstallColormaps, JS9InstallCommands, JS9InstallHelperRuntime, JS9InstallShapeEngine, JS9InstallFabricEngine, JS9InstallInitAnalysis, JS9InstallPublicApi, JS9InstallViewerInit, fabric, io, sprintf, dhtmlwindow, saveAs, Spinner, ResizeSensor, Jupyter, gaussBlur, ImageFilters, Plotly, tinycolor, regSelect */
 
 "use strict";
 
@@ -999,7 +999,7 @@ JS9.Image = function(file, params, func){
 	    // create the png object with image to hold png file
 	    this.png = {image: new Image()};
 	    // callback to fire when static RGB image is loaded
-	    $(this.png.image).on("load", () => {
+	    this.png.image.addEventListener("load", () => {
 		let ss;
 		if( (this.png.image.width !== this.raw.width)   ||
 		    (this.png.image.height !== this.raw.height) ){
@@ -1018,7 +1018,7 @@ JS9.Image = function(file, params, func){
 		// done loading, reset wait cursor
 		JS9.waiting(false);
 		JS9.error(`could not load image: ${this.id}`);
-	    });
+	    }, {once: true});
 	    // set src to download the display file
 	    this.png.image.src = this.rgbFile;
 	} else {
@@ -1213,7 +1213,7 @@ JS9.Image.prototype.mkOffScreenCanvas = function(){
     // sanity check
     if( !this.png || !this.png.image ){ return this; }
     // offscreen object holds canvas into which we draw to get RGB values
-    // no need for jquery here, we only manipulate this via the canvas API
+    // no wrapper helpers needed here, we only manipulate this via the canvas API
     this.offscreen = {};
     this.offscreen.canvas = document.createElement("canvas");
     this.offscreen.canvas.setAttribute("width", this.png.image.width);
@@ -3852,7 +3852,7 @@ JS9.Image.prototype.displayExtension = function(extid, opts, func){
 	for(i=0, got=0; i<JS9.images.length; i++){
 	    im = JS9.images[i];
 	    if( id === im.id ){
-		if( $(`#${im.display.id}`).length > 0 ){
+		if( JS9.resolveNode(im.display.id) ){
 		    if( this.display.id === im.display.id ){
 			got++;
 			break;
@@ -3928,7 +3928,7 @@ JS9.Image.prototype.displaySlice = function(slice, opts, func){
 	    for(i=0; i<JS9.images.length; i++){
 		tim = JS9.images[i];
 		if( opts.id === tim.id ){
-		    if( $(`#${tim.display.id}`).length > 0 ){
+		    if( JS9.resolveNode(tim.display.id) ){
 			tim.displayImage("display", {display: tim});
 			return this;
 		    }
@@ -5966,10 +5966,10 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 	// sanity check
 	if( !divjq || !plot ){ return; }
 	// call this once window is loaded
-	$(JS9.lightOpts[JS9.LIGHTWIN].topid)
-	    .arrive("#plotConfigForm", {onceOnly: true}, () => {
-		JS9.Plot.initConfigForm.call(this, plot, pobj);
-	    });
+	JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+			       "#plotConfigForm", () => {
+	    JS9.Plot.initConfigForm.call(this, plot, pobj);
+	});
 	if( JS9.allinone ){
 	    s = JS9.allinone.plotConfigHTML;
 	    plot.winid = this.displayAnalysis("params", s, {title, winformat});
@@ -5988,8 +5988,8 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
     // window format ...
     winFormat = opts.winformat;
     // ... or target div
-    if( opts.divid && $(`#${opts.divid}`).length > 0 ){
-	divid = $(`#${opts.divid}`);
+    if( opts.divid && JS9.resolveNode(opts.divid) ){
+	divid = JS9.resolveNode(opts.divid);
     }
     // make up title, if necessary
     title = opts.title || "";
@@ -6012,7 +6012,7 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 	// populate div or create the light window to hold the text
         if( divid ){
 	    // existing div
-	    divid.html(hstr);
+	    divid.innerHTML = hstr;
 	} else {
 	    // display light window
 	    winFormat = winFormat || a.textWin;
@@ -6035,18 +6035,18 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 	hstr = `<div id='${id}' class='JS9Analysis'><div id='${id}Plot' class='JS9Plot' ></div></div>`;
 	// populate div or create the light window to hold the plot
         if( divid ){
-	    divid.html(hstr);
+	    divid.innerHTML = hstr;
 	} else {
 	    winFormat = winFormat || a.plotWin;
 	    did = JS9.lightWin(id, "inline", hstr, title, winFormat);
 	}
 	// find the inner plot div which now is inside the light window
-	divjq = $(`#${id} #${id}Plot`);
+	divjq = document.querySelector(`#${id} #${id}Plot`);
 	// when using a div (instead of a lightwin), set the div size
         if( divid ){
-	    divjq.css("width", divid.css("width"));
-	    divjq.css("height", divid.css("height"));
-	    divjq.css("margin", 0);
+	    divjq.style.width = `${String(divid.getBoundingClientRect().width || divid.offsetWidth)}px`;
+	    divjq.style.height = `${String(divid.getBoundingClientRect().height || divid.offsetHeight)}px`;
+	    divjq.style.margin = "0";
 	}
 	// flot data
 	if( pobj.data ){
@@ -6090,7 +6090,7 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 		    popts.yaxis.autorange = true;
 		    pobj.curscale.y = "log";
 		}
-		try{  Plotly.newPlot(divjq.attr("id"), [pdata], popts); }
+		try{  Plotly.newPlot(divjq.id, [pdata], popts); }
 		catch(e){ JS9.error("can't plot data (plotly)", e); }
 		break;
 	    case "flot":
@@ -6117,7 +6117,11 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 		    popts.yaxis.inverseTransform = JS9.Plot.expfunc;
 		    pobj.curscale.y = "log";
 		}
-		try{ plot = $.plot(divjq, [pobj], popts); }
+		try{
+		    plot = JS9.plotAdapter(JS9.wrapCollection(divjq),
+					    [pobj],
+					    popts);
+		}
 		catch(e){ JS9.error("can't plot data (flot)", e); }
 		// annotate, if necessary
 		if( JS9.Plot.opts.annotate && pobj.annotations ){
@@ -6126,9 +6130,9 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 		break;
 	    }
 	    // add key handlers
-	    divjq.css("outline", "none");
-	    divjq.attr("tabindex", 0);
-	    divjq.on("keydown", (evt) => {
+	    divjq.style.outline = "none";
+	    divjq.tabIndex = 0;
+	    divjq.addEventListener("keydown", (evt) => {
 		const c = JS9.eventToCharStr(evt);
 		switch(c){
 		case "c":
@@ -6144,11 +6148,13 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
 		}
 	    });
 	    // add the plot config gear
-	    gim = $(`<img src='${JS9.InstallDir("images/gears.png")}'>`);
-	    gim.on("click", flotConfig);
-	    gdiv = $("<div class='JS9PlotGear'>");
-	    gdiv.append(gim);
-	    divjq.append(gdiv);
+	    gim = document.createElement("img");
+	    gim.src = JS9.InstallDir("images/gears.png");
+	    gim.addEventListener("click", flotConfig);
+	    gdiv = document.createElement("div");
+	    gdiv.className = "JS9PlotGear";
+	    gdiv.appendChild(gim);
+	    divjq.appendChild(gdiv);
 	}
 	break;
     case "params":
@@ -6156,13 +6162,13 @@ JS9.Image.prototype.displayAnalysis = function(type, s, opts){
     case "textline":
         if( divid ){
 	    if( JS9.allinone ){
-		divid.html(s);
+		divid.innerHTML = s;
 	    } else {
 		JS9.ajax({
 		    url: s,
 		    cache: false,  // required for v3 socket.io
 		    dataType: "text",
-		    success: (data) => { divid.html(data); }
+		    success: (data) => { divid.innerHTML = data; }
 		});
 	    }
 	} else {
@@ -8950,7 +8956,7 @@ JS9.Image.prototype.saveSession = function(file, opts){
 	    dlayer.canvas.forEachObject((obj) => {
 		// look for winid's: they cause circular json errors
 		if( obj.params && obj.params.winid ){
-		    if( $(obj.params.winid).is(":visible") ){
+		    if( JS9.isVisibleNode(obj.params.winid) ){
 			JS9.error("please close your region dialog box(es) to avoid a JSON circular reference error when saving this session");
 		    } else {
 			obj.params.winid = null;
@@ -9805,13 +9811,13 @@ JS9.Colormap.prototype.mkColorCell = function(ii){
 // ---------------------------------------------------------------------
 
 JS9.Display = function(el){
-    // pass jQuery element, DOM element, or id
-    if( JS9.isJQueryObject(el) ){
+    // pass a wrapped element, DOM element, or id
+    if( JS9.isWrappedCollection(el) ){
 	this.divjq = el;
     } else if( typeof el === "object" ){
-	this.divjq = $(el);
+	this.divjq = JS9.wrapCollection(el);
     } else {
-	this.divjq = $(`#${el}`);
+	this.divjq = JS9.wrapCollection(`#${el}`);
     }
     // make sure div has some id
     if( !this.divjq.attr("id") ){
@@ -9851,37 +9857,40 @@ JS9.Display = function(el){
     this.divjq.attr("tabindex", 0);
     // create DOM canvas element
     this.canvas = document.createElement("canvas");
-    // jquery version for event handling and DOM manipulation
-    this.canvasjq = $(this.canvas)
+    // wrapped canvas node for event handling and DOM updates
+    this.canvasjq = JS9.wrapCollection(this.canvas)
 	.addClass("JS9Image")
 	.attr("id", `${this.id}Image`)
 	.attr("width", this.width)
 	.attr("height", this.height)
 	.css("z-index", JS9.ZINDEX);
     // add container to the high-level div
-    this.displayConjq = $("<div>")
-	.addClass("JS9Container")
-	.attr("id", `${this.id}DisplayConjq`)
-	.css("z-index", JS9.ZINDEX)
-        // set tabindex so we can sense keyboard events
-        // (this invocation senses keydown after image is loaded)
-	.attr("tabindex", "0")
-	.append(this.canvasjq)
-	.appendTo(this.divjq);
+    this.displayCon = document.createElement("div");
+    this.displayCon.className = "JS9Container";
+    this.displayCon.id = `${this.id}DisplayConjq`;
+    this.displayCon.style.zIndex = String(JS9.ZINDEX);
+    // set tabindex so we can sense keyboard events
+    // (this invocation senses keydown after image is loaded)
+    this.displayCon.setAttribute("tabindex", "0");
+    this.displayCon.appendChild(this.canvas);
+    this.divjq.append(this.displayCon);
+    this.displayConjq = JS9.wrapCollection(this.displayCon);
     if( !JS9.allinone ){
-	this.iconjq = $("<div>")
-	    .addClass("JS9Logo")
-	    .css("display", "none")
-	    .css("z-index", JS9.ZINDEX+1)
-	    .appendTo(this.divjq);
-	this.iconimgjs = $("<img>")
-	    .addClass("JS9Logo")
-	    .attr("src", JS9.InstallDir(JS9.globalOpts.logo))
-	    .attr("alt", "js9")
-	    .attr("title", "js9")
-	    .appendTo(this.iconjq);
+	this.icon = document.createElement("div");
+	this.icon.className = "JS9Logo";
+	this.icon.style.display = "none";
+	this.icon.style.zIndex = String(JS9.ZINDEX+1);
+	this.divjq.append(this.icon);
+	this.iconjq = JS9.wrapCollection(this.icon);
+	this.iconimg = document.createElement("img");
+	this.iconimg.className = "JS9Logo";
+	this.iconimg.src = JS9.InstallDir(JS9.globalOpts.logo);
+	this.iconimg.alt = "js9";
+	this.iconimg.title = "js9";
+	this.icon.appendChild(this.iconimg);
+	this.iconimgjs = JS9.wrapCollection(this.iconimg);
 	if( JS9.globalOpts.logoDisplay ){
-	    this.iconjq.css("display", "block");
+	    this.icon.style.display = "block";
 	}
     }
     // add resize capability, if necessary
@@ -9914,10 +9923,11 @@ JS9.Display = function(el){
 	this.context.imageSmoothingEnabled = false;
     }
     // add the display tooltip
-    this.tooltip = $("<div>")
-	.attr("id", `tooltip_${this.id}`)
-	.addClass("JS9Tooltip")
-	.appendTo(this.divjq);
+    this.tooltipEl = document.createElement("div");
+    this.tooltipEl.id = `tooltip_${this.id}`;
+    this.tooltipEl.className = "JS9Tooltip";
+    this.divjq.append(this.tooltipEl);
+    this.tooltip = JS9.wrapCollection(this.tooltipEl);
     // no image loaded into this canvas
     this.image = null;
     // no plugin instances yet
@@ -9998,28 +10008,28 @@ JS9.Display = function(el){
 
 // add support for file dialog box which executes JS9 routine on file blobs
 JS9.Display.prototype.addFileDialog = function(funcName, template){
-    let jdiv, jinput, id;
+    let div, input, id;
     // sanity check
     if( !funcName || !JS9.publics[funcName] ){ return; }
     id = `openLocal${funcName}-${this.id}`;
     // outer div
     // https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file
     // recommends opacity over visibility, but it breaks the menubar in ios
-    jdiv = $("<div>")
-	.addClass("JS9Hidden")
-	.appendTo(this.divjq);
+    div = document.createElement("div");
+    div.className = "JS9Hidden";
+    this.divjq.append(div);
     // inner file input element
-    jinput = $("<input>")
-	.attr("type", "file")
-	.attr("id", id)
-	.attr("multiple", true)
-	.appendTo(jdiv);
+    input = document.createElement("input");
+    input.type = "file";
+    input.id = id;
+    input.multiple = true;
+    div.appendChild(input);
     // add accept template, if possible
     if( template ){
-	jinput.attr("accept", template);
+	input.setAttribute("accept", template);
     }
     // add callback for when input changes
-    jinput.on("change", (e) => {
+    input.addEventListener("change", (e) => {
 	let i, opts;
 	const el = e.currentTarget;
 	if( el.files.length ){
@@ -10044,41 +10054,40 @@ JS9.Display.prototype.addFileDialog = function(funcName, template){
 
 // initialize message layers
 JS9.Display.prototype.initMessages = function(){
-    this.messageContainer = $("<div>")
-	.addClass("JS9Container")
-        .css("z-index", JS9.MESSZINDEX)
-	.appendTo(this.divjq);
-    this.infoArea = $("<div>")
-	.addClass("JS9Message")
-	.appendTo(this.messageContainer);
-    this.regionsArea = $("<div>")
-	.addClass("JS9Message")
-	.appendTo(this.messageContainer);
-    this.progressArea = $("<div>")
-	.addClass("JS9Progress")
-	.addClass("JS9Message")
-	.appendTo(this.messageContainer);
-    this.progressBar = $("<progress>")
-	.addClass("JS9ProgressBar")
-	.attr("value", 0)
-	.attr("max", 100)
-	.attr("name", "progress")
-	.appendTo(this.progressArea);
+    const messageContainer = document.createElement("div");
+    const infoArea = document.createElement("div");
+    const regionsArea = document.createElement("div");
+    const progressArea = document.createElement("div");
+    const progressBar = document.createElement("progress");
+    messageContainer.className = "JS9Container";
+    messageContainer.style.zIndex = String(JS9.MESSZINDEX);
+    this.divjq.append(messageContainer);
+    infoArea.className = "JS9Message";
+    messageContainer.appendChild(infoArea);
+    regionsArea.className = "JS9Message";
+    messageContainer.appendChild(regionsArea);
+    progressArea.className = "JS9Progress JS9Message";
+    messageContainer.appendChild(progressArea);
+    progressBar.className = "JS9ProgressBar";
+    progressBar.value = 0;
+    progressBar.max = 100;
+    progressBar.name = "progress";
+    progressArea.appendChild(progressBar);
+    this.messageContainer = JS9.wrapCollection(messageContainer);
+    this.infoArea = JS9.wrapCollection(infoArea);
+    this.regionsArea = JS9.wrapCollection(regionsArea);
+    this.progressArea = JS9.wrapCollection(progressArea);
+    this.progressBar = JS9.wrapCollection(progressBar);
     // make it draggable, if possible
-    try{
-	this.messageContainer.draggable({
-	    // eslint-disable-next-line no-unused-vars
-	    start(event, ui) {
-		this.oicb = JS9.globalOpts.internalContrastBias;
-		JS9.globalOpts.internalContrastBias = false;
-	    },
-	    // eslint-disable-next-line no-unused-vars
-	    stop(event, ui) {
-		JS9.globalOpts.internalContrastBias = this.oicb;
-	    }
-	});
-    }
-    catch(ignore){ /* empty */ }
+    JS9.makeDraggable(messageContainer, {
+	start: () => {
+	    this.oicb = JS9.globalOpts.internalContrastBias;
+	    JS9.globalOpts.internalContrastBias = false;
+	},
+	stop: () => {
+	    JS9.globalOpts.internalContrastBias = this.oicb;
+	}
+    });
     // allow chaining
     return this;
 };
@@ -10112,17 +10121,17 @@ JS9.Display.prototype.displayPlugin = function(plugin){
 	    iid = `${this.id}_${name}_innerDiv`;
 	    // set up a new light instance, if necessary
 	    if( !pinst ){
-		odiv = $("<div>")
-		    .attr("id", oid)
-		    .css("display", "none")
-		    .appendTo($(this.divjq));
-		$("<div>")
-		    .addClass(plugin.name)
-		    .attr("id", iid)
-		    .attr("data-js9id", this.divjq.attr("id"))
-		    .css("height", "100%")
-		    .css("width", "100%")
-		    .appendTo(odiv);
+		odiv = document.createElement("div");
+		odiv.id = oid;
+		odiv.style.display = "none";
+		this.divjq.append(odiv);
+		pdiv = document.createElement("div");
+		pdiv.className = plugin.name;
+		pdiv.id = iid;
+		pdiv.dataset.js9id = this.divjq.attr("id");
+		pdiv.style.height = "100%";
+		pdiv.style.width = "100%";
+		odiv.appendChild(pdiv);
 	    }
 	    // window not created: create and show it
 	    // create the window
@@ -10147,7 +10156,7 @@ JS9.Display.prototype.displayPlugin = function(plugin){
 	    // create the light window
 	    win = JS9.lightWin(did, "div", oid, title, s);
 	    // find inner div in the light window
-	    pdiv = $(`#${did} #${iid}`);
+	    pdiv = document.querySelector(`#${did} #${iid}`);
 	    // create the plugin inside the inner div
 	    pinst = JS9.instantiatePlugin(pdiv, plugin, win);
 	    pinst.winHandle.onclose = () => {
@@ -10249,34 +10258,66 @@ JS9.Display.prototype.displayLoadForm = function(opts){
 	html = JS9.InstallDir(JS9.globalOpts.loadURL);
     }
     // call this once window is loaded to init form values
-    $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-	.arrive(".loadForm", {onceOnly: true}, (el) => {
-	    const localfile  = $(el).data("localfile")  || this.tmp.localfile;
-	    const remotefile = $(el).data("remotefile") || this.tmp.remotefile;
-	    if( opts.local ){
-		$(did).find(".localfile").removeClass("nodisplay");
-		$(did).find(".localdoc").removeClass("nodisplay");
-		if( localfile ){
-		    $(did).find(`input[name="localfile"]`).val(localfile);
+    JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+			   ".loadForm", (el) => {
+	let input;
+	const win = JS9.resolveNode(did);
+	const findInputByValue = (value) => {
+	    return Array.from(win.querySelectorAll("input")).find((node) => {
+		return node.value === value;
+	    });
+	};
+	const show = (selector) => {
+	    win.querySelectorAll(selector).forEach((node) => {
+		node.classList.remove("nodisplay");
+	    });
+	};
+	const localfile  = el.dataset.localfile  || this.tmp.localfile;
+	const remotefile = el.dataset.remotefile || this.tmp.remotefile;
+	if( !win ){
+	    return;
+	}
+	if( opts.local ){
+	    show(".localfile");
+	    show(".localdoc");
+	    if( localfile ){
+		input = win.querySelector("input[name='localfile']");
+		if( input ){
+		    input.value = localfile;
 		}
-		$(did).find(`input[value=${format}]`).click();
 	    }
-	    if( opts.remote ){
-		$(did).find(".remotefile").removeClass("nodisplay");
-		$(did).find(".remotedoc").removeClass("nodisplay");
-		if( remotefile ){
-		    $(did).find(`input[name="remotefile"]`).val(remotefile);
-		}
-		if( !JS9.proxyAvailable() ){
-		    $(did).find(`input[value="proxy"]`).prop("disabled", true);
-		}
-		$(did).find(`input[value=${method}]`).click();
+	    input = findInputByValue(format);
+	    if( input ){
+		input.click();
 	    }
-	});
+	}
+	if( opts.remote ){
+	    show(".remotefile");
+	    show(".remotedoc");
+	    if( remotefile ){
+		input = win.querySelector("input[name='remotefile']");
+		if( input ){
+		    input.value = remotefile;
+		}
+	    }
+	    if( !JS9.proxyAvailable() ){
+		input = findInputByValue("proxy");
+		if( input ){
+		    input.disabled = true;
+		}
+	    }
+	    input = findInputByValue(method);
+	    if( input ){
+		input.click();
+	    }
+	}
+    });
     // create the window
     did = JS9.Image.prototype.displayAnalysis.call(null, "params", html, opts);
     // save display id
-    $(did).data("dispid", this.id);
+    if( JS9.resolveNode(did) ){
+	JS9.resolveNode(did).dataset.dispid = this.id;
+    }
 };
 
 //  resize a display
@@ -10370,7 +10411,10 @@ JS9.Display.prototype.resize = function(width, height, opts){
 	(JS9.isNull(opts.resizeMenubar) || opts.resizeMenubar) ){
 	pinst = this.pluginInstances.JS9Menubar;
 	if( pinst ){
-	    $(`#${this.id}Menubar`).css("width", nwidth);
+	    el = JS9.resolveNode(`${this.id}Menubar`);
+	    if( el ){
+		el.style.width = `${String(nwidth)}px`;
+	    }
 	}
     }
     // change the toolbar width, unless explicitly told not to
@@ -10400,7 +10444,10 @@ JS9.Display.prototype.resize = function(width, height, opts){
 	(JS9.isNull(opts.resizeStatusbar) || opts.resizeStatusbar) ){
 	pinst = this.pluginInstances.JS9Statusbar;
 	if( pinst ){
-	    $(`#${this.id}Statusbar`).css("width", nwidth);
+	    el = JS9.resolveNode(`${this.id}Statusbar`);
+	    if( el ){
+		el.style.width = `${String(nwidth)}px`;
+	    }
 	    // resize colorbar, if necessary
 	    if( pinst.statusBar &&
 		pinst.statusBar.match(/\$colorbar/) &&
@@ -10478,24 +10525,33 @@ JS9.Display.prototype.inResize = function(pos){
 };
 
 // scroll the display to the center of the viewport
-// http://stackoverflow.com/questions/18150090/jquery-scroll-element-to-the-middle-of-the-screen-instead-of-to-the-top-with-a
+// scroll the display to the center of the viewport
 JS9.Display.prototype.center = function(){
-    const el = this.divjq;
-    let i, div, tel, voffset, hoffset;
-    let elVOffset = el.offset().top;
-    let elHeight = el.height();
-    const windowHeight = $(window).height();
-    const elHOffset = el.offset().left;
-    const elWidth = el.width();
-    const windowWidth = $(window).width();
+    const el = JS9.resolveNode(this.divjq);
+    let i, div, tel, telNode, voffset, hoffset;
+    let elOffset, elVOffset, elHeight, elHOffset, elWidth;
+    const windowHeight = window.innerHeight;
+    const windowWidth = window.innerWidth;
     const speed = 250;
+    if( !el ){
+	return this;
+    }
+    elOffset = JS9.getNodeOffset(el);
+    elVOffset = elOffset.top;
+    elHeight = el.getBoundingClientRect().height || el.offsetHeight || 0;
+    elHOffset = elOffset.left;
+    elWidth = el.getBoundingClientRect().width || el.offsetWidth || 0;
     // divs we take into account when getting total height
     for(i=0; i<JS9.globalOpts.centerDivs.length; i++){
 	div = JS9.globalOpts.centerDivs[i];
 	if( this.pluginInstances[div] ){
 	    tel = this.pluginInstances[div].divjq;
-	    elHeight += tel.height();
-	    elVOffset = Math.min(tel.offset().top, elVOffset);
+	    telNode = JS9.resolveNode(tel);
+	    if( telNode ){
+		elHeight += telNode.getBoundingClientRect().height ||
+		    telNode.offsetHeight || 0;
+		elVOffset = Math.min(JS9.getNodeOffset(telNode).top, elVOffset);
+	    }
 	}
     }
     if (elHeight < windowHeight) {
@@ -10510,7 +10566,14 @@ JS9.Display.prototype.center = function(){
     else {
 	hoffset = elHOffset;
     }
-    $("html, body").animate({scrollTop: voffset, scrollLeft: hoffset}, speed);
+    if( speed && typeof window.scrollTo === "function" ){
+	try{
+	    window.scrollTo({top: voffset, left: hoffset, behavior: "smooth"});
+	}
+	catch(ignore){
+	    window.scrollTo(hoffset, voffset);
+	}
+    }
     // allow chaining
     return this;
 };
@@ -10578,6 +10641,16 @@ JS9.Display.prototype.separate = function(opts){
     const COLORBAR_FUDGE = 7;
     const DHTML_HEIGHT = 30 + 13; // height of dhtml lightwin extras;
     const initopts = (display, fromID, opts) => {
+	const getNodeHeight = (node) => {
+	    if( !node ){
+		return 0;
+	    }
+	    return node.getBoundingClientRect().height || node.offsetHeight || 0;
+	};
+	const isPluginActive = (node) => {
+	    const container = node ? node.closest(".JS9PluginContainer") : null;
+	    return JS9.isVisibleNode(container);
+	};
 	// sanity check
 	if( !fromID ){
 	    JS9.error("can't init separation ops: no 'from' id");
@@ -10620,43 +10693,35 @@ JS9.Display.prototype.separate = function(opts){
 	}
 	sep.topExtra = DHTML_HEIGHT;
 	sep.leftExtra = 0;
-	sep.js9 = $(`#${fromID}`);
-	sep.menubar = $(`#${fromID}Menubar`);
-	if( sep.menubar.length > 0 ){
-	    sep.menubar.isactive = sep.menubar.closest(".JS9PluginContainer").css("visibility") === "visible";
-	}
-	sep.toolbar = $(`#${fromID}Toolbar`);
-	if( sep.toolbar.length > 0 ){
-	    sep.toolbar.isactive = sep.toolbar.closest(".JS9PluginContainer").css("visibility") === "visible";
-	}
-	sep.statusbar = $(`#${fromID}Statusbar`);
-	if( sep.statusbar.length > 0 ){
-	    sep.statusbar.isactive = sep.statusbar.closest(".JS9PluginContainer").css("visibility") === "visible";
-	}
-	sep.colorbar = $(`#${fromID}Colorbar`);
-	if( sep.colorbar.length > 0 && !sep.statusbar.length ){
-	    sep.colorbar.isactive = sep.colorbar.closest(".JS9PluginContainer").css("visibility") === "visible";
-	}
-	if( sep.js9.length > 0 ){
+	sep.js9 = JS9.resolveNode(fromID);
+	sep.menubar = JS9.resolveNode(`${fromID}Menubar`);
+	sep.toolbar = JS9.resolveNode(`${fromID}Toolbar`);
+	sep.statusbar = JS9.resolveNode(`${fromID}Statusbar`);
+	sep.colorbar = JS9.resolveNode(`${fromID}Colorbar`);
+	sep.menubarActive = isPluginActive(sep.menubar);
+	sep.toolbarActive = isPluginActive(sep.toolbar);
+	sep.statusbarActive = isPluginActive(sep.statusbar);
+	sep.colorbarActive = !sep.statusbar && isPluginActive(sep.colorbar);
+	if( sep.js9 ){
 	    // hack: height of the dhtml drag handle and status area
-	    sep.width = sep.js9.width();
-	    sep.height = sep.js9.height();
-	    sep.top = sep.js9.offset().top - $(window).scrollTop() - LIT_FUDGE;
-	    sep.left = sep.js9.offset().left - JS9.getDocumentScroll().x;
-	    if( sep.menubar.isactive ){
-		sep.height += sep.menubar.height();
-		sep.top -= sep.menubar.height();
+	    sep.width = sep.js9.getBoundingClientRect().width || sep.js9.offsetWidth;
+	    sep.height = sep.js9.getBoundingClientRect().height || sep.js9.offsetHeight;
+	    sep.top = sep.js9.getBoundingClientRect().top - LIT_FUDGE;
+	    sep.left = sep.js9.getBoundingClientRect().left;
+	    if( sep.menubarActive ){
+		sep.height += getNodeHeight(sep.menubar);
+		sep.top -= getNodeHeight(sep.menubar);
 	    }
-	    if( sep.toolbar.isactive ){
-		sep.height += sep.toolbar.height();
-		sep.top -= sep.toolbar.height();
+	    if( sep.toolbarActive ){
+		sep.height += getNodeHeight(sep.toolbar);
+		sep.top -= getNodeHeight(sep.toolbar);
 	    }
-	    if( sep.statusbar.isactive ){
-		sep.height += sep.statusbar.height();
-		sep.top -= sep.statusbar.height();
-	    } else if( sep.colorbar.isactive ){
-		sep.height += sep.colorbar.height();
-		sep.top -= sep.colorbar.height();
+	    if( sep.statusbarActive ){
+		sep.height += getNodeHeight(sep.statusbar);
+		sep.top -= getNodeHeight(sep.statusbar);
+	    } else if( sep.colorbarActive ){
+		sep.height += getNodeHeight(sep.colorbar);
+		sep.top -= getNodeHeight(sep.colorbar);
 		sep.top += COLORBAR_FUDGE;
 	    }
 	}
@@ -10664,19 +10729,19 @@ JS9.Display.prototype.separate = function(opts){
     const getopts = (fromID, toID) => {
 	let html, winopts;
 	if( fromID ){
-	    if( sep.js9.length > 0 ){
+	    if( sep.js9 ){
 		html = "";
-		if( sep.menubar.isactive ){
-		    html += sprintf(menuStr, toID, sep.js9.width());
+		if( sep.menubarActive ){
+		    html += sprintf(menuStr, toID, sep.width);
 		}
-		if( sep.toolbar.isactive ){
-		    html += sprintf(toolStr, toID, sep.js9.width());
+		if( sep.toolbarActive ){
+		    html += sprintf(toolStr, toID, sep.width);
 		}
-		html += sprintf(js9Str, toID, sep.js9.width(),sep.js9.height());
-		if( sep.statusbar.isactive ){
-		    html += sprintf(statusStr, toID, sep.js9.width());
-		} else if( sep.colorbar.isactive ){
-		    html += sprintf(colorStr, toID, sep.js9.width());
+		html += sprintf(js9Str, toID, sep.width, sep.height);
+		if( sep.statusbarActive ){
+		    html += sprintf(statusStr, toID, sep.width);
+		} else if( sep.colorbarActive ){
+		    html += sprintf(colorStr, toID, sep.width);
 		}
 	    }
 	    if( sep.layout === "auto" ){
@@ -10740,11 +10805,11 @@ JS9.Display.prototype.separate = function(opts){
 		    if( sep.layout === "grid" ){
 			// a div hold the html for this separated display,
 			// and is appended to grid container
-			$("<div>")
-			    .prop("id", xopts.id + "GridItem")
-			    .addClass("JS9GridItem")
-			    .append($(xopts.html))
-			    .appendTo(sep.container);
+			const gridItem = document.createElement("div");
+			gridItem.id = xopts.id + "GridItem";
+			gridItem.className = "JS9GridItem";
+			gridItem.innerHTML = xopts.html;
+			sep.container.append(gridItem);
 			// create the new JS9 display, with associated plugins
 			JS9.AddDivs(xopts.id);
 			// move this image
@@ -10754,17 +10819,17 @@ JS9.Display.prototype.separate = function(opts){
 		    } else {
 	            // create a light wndow
 		    // code to run when new window exists
-		    $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-			    .arrive(`#${d1}`, {onceOnly: true}, (el) => {
-				id = $(el).attr("id");
-				// FF (at least) needs this 0ms delay
-				window.setTimeout(() => {
-				    // move this image
-				    saveims[id].moveToDisplay(id);
-				    // process next image
-				    separateim(arr);
-				}, 0);
-			    });
+		    JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+					  `#${d1}`, (el) => {
+			id = el.id;
+			// FF (at least) needs this 0ms delay
+			window.setTimeout(() => {
+			    // move this image
+			    saveims[id].moveToDisplay(id);
+			    // process next image
+			    separateim(arr);
+			}, 0);
+		    });
 		    // load new window, code above gets run when window exists
 		    JS9.LoadWindow(null, {id: xopts.id}, "light",
 				   xopts.html, xopts.winopts);
@@ -11493,30 +11558,32 @@ JS9.MouseTouch.actionid = function(cname, aname){
 
 // add to the text descriptions
 JS9.MouseTouch.addText = function(container, text){
-    let s, divjq;
+    let s, div, target;
     // create the html for this action
     s = sprintf(JS9.MouseTouch.textHTML, text);
+    target = JS9.isWrappedCollection(container) ? container[0] : container;
     // add text html to the text container
-    divjq = $("<div>")
-	.addClass(`${JS9.MouseTouch.BASE}Text`)
-	.html(s)
-	.appendTo(container);
-    return divjq;
+    div = document.createElement("div");
+    div.className = `${JS9.MouseTouch.BASE}Text`;
+    div.innerHTML = s;
+    target.appendChild(div);
+    return JS9.wrapCollection(div);
 };
 
 // add to the sortable action list
 JS9.MouseTouch.addAction = function(container, cname, aname){
-    let s, id, divjq;
+    let s, id, div, target;
     id = JS9.MouseTouch.actionid(cname, aname);
     // create the html for this action
     s = sprintf(JS9.MouseTouch.actionHTML, aname);
+    target = JS9.isWrappedCollection(container) ? container[0] : container;
     // add action html to the action container
-    divjq = $("<div>")
-	.addClass(`${JS9.MouseTouch.BASE}Action`)
-	.attr("id", id)
-	.html(s)
-	.appendTo(container);
-    return divjq;
+    div = document.createElement("div");
+    div.className = `${JS9.MouseTouch.BASE}Action`;
+    div.id = id;
+    div.innerHTML = s;
+    target.appendChild(div);
+    return JS9.wrapCollection(div);
 };
 
 // display value/position
@@ -11901,9 +11968,30 @@ JS9.MouseTouch.mousetouchzoom = function(id, target){
 // constructor: add HTML elements to the plugin
 JS9.MouseTouch.init = function(){
     let i, s;
+    const makeNode = (tag, opts={}) => {
+	const node = document.createElement(tag);
+	if( opts.className ){
+	    node.className = opts.className;
+	}
+	if( opts.id ){
+	    node.id = opts.id;
+	}
+	if( opts.html !== undefined ){
+	    node.innerHTML = opts.html;
+	}
+	if( opts.style ){
+	    Object.keys(opts.style).forEach((key) => {
+		node.style[key] = opts.style[key];
+	    });
+	}
+	if( opts.parent ){
+	    opts.parent.appendChild(node);
+	}
+	return node;
+    };
     // on entry, these elements have already been defined:
     // this.div:      the DOM element representing the div for this plugin
-    // this.divjq:    the jquery object representing the div for this plugin
+    // this.divjq:    the wrapped div representing this plugin
     // this.id:       the id of the div (or the plugin name as a default)
     // this.display:  the display object associated with this plugin
     // this.dispMode: display mode (for internal use)
@@ -11914,31 +12002,39 @@ JS9.MouseTouch.init = function(){
     // allow scrolling on the plugin
     this.divjq.addClass("JS9PluginScrolling");
     // main container
-    this.mousetouchContainer = $("<div>")
-	.addClass(`${JS9.MouseTouch.BASE}Container`)
-	.attr("id", `${this.id}MouseTouchContainer`)
-	.appendTo(this.divjq);
+    this.mousetouchContainer = JS9.wrapCollection(makeNode("div", {
+	className: `${JS9.MouseTouch.BASE}Container`,
+	id: `${this.id}MouseTouchContainer`,
+	parent: this.div
+    }));
     s = sprintf("<div class='%s'><span><b>Drag an action to reconfigure JS9 mouse/touch events:</b></span><p>", `${JS9.MouseTouch.BASE}Header`);
-    this.mousetouchHeadContainer = $("<span style='float: left'>")
-	.addClass(`${JS9.MouseTouch.BASE}Container`)
-	.attr("id", `${this.id}MouseTouchHeadContainer`)
-        .html(s)
-	.appendTo(this.mousetouchContainer);
-    this.mousetouchTextContainer = $("<span style='float: left'>")
-	.addClass(`${JS9.MouseTouch.BASE}Container`)
-	.attr("id", `${this.id}MouseTouchTextContainer`)
-	.appendTo(this.mousetouchContainer);
-    this.mousetouchActionContainer = $("<span style='float: left'>")
-	.addClass(`${JS9.MouseTouch.BASE}Container`)
-	.attr("id", `${this.id}MouseTouchActionContainer`)
-	.appendTo(this.mousetouchContainer);
+    this.mousetouchHeadContainer = JS9.wrapCollection(makeNode("span", {
+	className: `${JS9.MouseTouch.BASE}Container`,
+	id: `${this.id}MouseTouchHeadContainer`,
+	html: s,
+	style: {float: "left"},
+	parent: this.mousetouchContainer[0]
+    }));
+    this.mousetouchTextContainer = JS9.wrapCollection(makeNode("span", {
+	className: `${JS9.MouseTouch.BASE}Container`,
+	id: `${this.id}MouseTouchTextContainer`,
+	style: {float: "left"},
+	parent: this.mousetouchContainer[0]
+    }));
+    this.mousetouchActionContainer = JS9.wrapCollection(makeNode("span", {
+	className: `${JS9.MouseTouch.BASE}Container`,
+	id: `${this.id}MouseTouchActionContainer`,
+	style: {float: "left"},
+	parent: this.mousetouchContainer[0]
+    }));
     if( JS9.TOUCHSUPPORTED ){
 	// container to hold text descriptions
-	this.mousetouchTouchTextContainer = $("<div>")
-	    .addClass(`${JS9.MouseTouch.BASE}TextContainer`)
-	    .attr("id", `${this.id}TouchTextContainer`)
-            .html("")
-	    .appendTo(this.mousetouchTextContainer);
+	this.mousetouchTouchTextContainer = JS9.wrapCollection(makeNode("div", {
+	    className: `${JS9.MouseTouch.BASE}TextContainer`,
+	    id: `${this.id}TouchTextContainer`,
+	    html: "",
+	    parent: this.mousetouchTextContainer[0]
+	}));
 	for(i=0; i<JS9.MouseTouch.touchText.length; i++){
             JS9.MouseTouch.addText.call(this,
 					this.mousetouchTouchTextContainer,
@@ -11947,15 +12043,16 @@ JS9.MouseTouch.init = function(){
 	for(i=JS9.MouseTouch.touchText.length;
 	    i<this.display.touchActions.length ; i++){
             JS9.MouseTouch.addText.call(this,
-					this.mousetouchMouseTextContainer,
+					this.mousetouchTouchTextContainer,
 					"&nbsp;");
 	}
 	// container to hold touch actions
-	this.mousetouchTouchContainer = $("<div>")
-	    .addClass(`${JS9.MouseTouch.BASE}ActionContainer`)
-	    .attr("id", `${this.id}TouchContainer`)
-            .html("")
-	    .appendTo(this.mousetouchActionContainer);
+	this.mousetouchTouchContainer = JS9.wrapCollection(makeNode("div", {
+	    className: `${JS9.MouseTouch.BASE}ActionContainer`,
+	    id: `${this.id}TouchContainer`,
+	    html: "",
+	    parent: this.mousetouchActionContainer[0]
+	}));
 	// add touch actions, if necessary
 	for(i=0; i<this.display.touchActions.length; i++){
 	    s = this.display.touchActions[i];
@@ -11963,25 +12060,25 @@ JS9.MouseTouch.init = function(){
 					  "touch", s);
 	}
 	// the actions within the action container will be sortable
-	this.mousetouchTouchContainer.sortable({
-	    start: (event, ui) => {
-		this.oidx = ui.item.index();
+	JS9.enableDragSort(this.mousetouchTouchContainer, {
+	    start: ({oldIndex}) => {
+		this.oidx = oldIndex;
 	    },
-	    stop: (event, ui) => {
-		const nidx = ui.item.index();
+	    stop: ({newIndex}) => {
 		const oarr = this.display.touchActions.splice(this.oidx, 1)[0];
 		// JS9 action list reflects the sort
-		this.display.touchActions.splice(nidx, 0, oarr);
+		this.display.touchActions.splice(newIndex, 0, oarr);
 		delete this.oidx;
 	    }
 	});
     }
     if(  !/iPad|iPhone|iPod/.test(navigator.platform) ){
 	// container to hold text descriptions
-	this.mousetouchMouseTextContainer = $("<div>")
-	    .addClass(`${JS9.MouseTouch.BASE}TextContainer`)
-	    .attr("id", `${this.id}MouseTextContainer`)
-	    .appendTo(this.mousetouchTextContainer);
+	this.mousetouchMouseTextContainer = JS9.wrapCollection(makeNode("div", {
+	    className: `${JS9.MouseTouch.BASE}TextContainer`,
+	    id: `${this.id}MouseTextContainer`,
+	    parent: this.mousetouchTextContainer[0]
+	}));
 	for(i=0; i< 3; i++){
             JS9.MouseTouch.addText.call(this,
 					this.mousetouchMouseTextContainer,
@@ -11993,11 +12090,12 @@ JS9.MouseTouch.init = function(){
 					"&nbsp;");
 	}
 	// container to hold mouse actions
-	this.mousetouchMouseContainer = $("<div>")
-	    .addClass(`${JS9.MouseTouch.BASE}ActionContainer`)
-	    .attr("id", `${this.id}MouseContainer`)
-            .html("")
-	    .appendTo(this.mousetouchActionContainer);
+	this.mousetouchMouseContainer = JS9.wrapCollection(makeNode("div", {
+	    className: `${JS9.MouseTouch.BASE}ActionContainer`,
+	    id: `${this.id}MouseContainer`,
+	    html: "",
+	    parent: this.mousetouchActionContainer[0]
+	}));
 	// add mouse actions, if necessary
 	for(i=0; i<this.display.mouseActions.length; i++){
 	    s = this.display.mouseActions[i];
@@ -12005,29 +12103,33 @@ JS9.MouseTouch.init = function(){
 					  "mouse", s);
 	}
 	// the actions within the action container will be sortable
-	this.mousetouchMouseContainer.sortable({
-	    start: (event, ui) => {
-		this.oidx = ui.item.index();
+	JS9.enableDragSort(this.mousetouchMouseContainer, {
+	    start: ({oldIndex}) => {
+		this.oidx = oldIndex;
 	    },
-	    stop: (event, ui) => {
-		const nidx = ui.item.index();
+	    stop: ({newIndex}) => {
 		const oarr = this.display.mouseActions.splice(this.oidx, 1)[0];
 		// JS9 action list reflects the sort
-		this.display.mouseActions.splice(nidx, 0, oarr);
+		this.display.mouseActions.splice(newIndex, 0, oarr);
 		delete this.oidx;
 	    }
 	});
     }
     // add the footer, containing buttons
     s = sprintf("<p><div class='%s'>Use mouse wheel or pinch to zoom:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type='checkbox' value='1' onclick='javascript:JS9.MouseTouch.mousetouchzoom(\"%s\", this);'></div>", `${JS9.MouseTouch.BASE}Footer`, this.display.id);
-    this.mousetouchFootContainer = $("<span style='float: left'>")
-	.addClass(`${JS9.MouseTouch.BASE}Container`)
-	.attr("id", `${this.id}MouseTouchFootContainer`)
-        .html(s)
-	.appendTo(this.mousetouchContainer);
+    this.mousetouchFootContainer = JS9.wrapCollection(makeNode("span", {
+	className: `${JS9.MouseTouch.BASE}Container`,
+	id: `${this.id}MouseTouchFootContainer`,
+	html: s,
+	style: {float: "left"},
+	parent: this.mousetouchContainer[0]
+    }));
     // set initial value of scroll
     if( JS9.globalOpts.mousetouchZoom ){
-	this.mousetouchContainer.find("input").attr("checked", true);
+	const checkbox = this.mousetouchContainer[0].querySelector("input");
+	if( checkbox ){
+	    checkbox.checked = true;
+	}
     }
 };
 
@@ -12211,6 +12313,9 @@ JS9.Regions.displayConfigForm = function(shape, opts){
     let s, winformat;
     let got = 0;
     let title = JS9.Regions.opts.title;
+    let multiNode;
+    let winidNode;
+    let imageNode;
     // sanity check
     if( !this ){ return; }
     // opts is optional
@@ -12252,13 +12357,22 @@ JS9.Regions.displayConfigForm = function(shape, opts){
     }
     // if a multi select form already exists, just update it
     if( opts.multi ){
-	$("form[class='regionsConfigForm']").each((index, element) => {
-	    const multi = $(element).data("multi");
-	    const winid = $(element).data("winid");
-	    const im = $(element).data("im");
-	    if( multi && winid && im === this ){
-		opts.winid = winid;
-		im.initRegionsForm(null, opts);
+	document.querySelectorAll("form.regionsConfigForm").forEach((element) => {
+	    multiNode = element._js9Multi;
+	    winidNode = element._js9Winid;
+	    imageNode = element._js9Image;
+	    if( multiNode === undefined ){
+		multiNode = JS9.wrapCollection(element).data("multi");
+	    }
+	    if( !winidNode ){
+		winidNode = JS9.wrapCollection(element).data("winid");
+	    }
+	    if( imageNode === undefined ){
+		imageNode = JS9.wrapCollection(element).data("im");
+	    }
+	    if( multiNode && winidNode && imageNode === this ){
+		opts.winid = winidNode;
+		imageNode.initRegionsForm(null, opts);
 		got++;
 	    }
 	});
@@ -12268,19 +12382,28 @@ JS9.Regions.displayConfigForm = function(shape, opts){
 	if( got ){ return; }
     }
     // call this once window is loaded
-    $(JS9.lightOpts[JS9.LIGHTWIN].topid)
-	.arrive(".regionsConfigForm", {onceOnly: true}, () => {
-	    opts.firsttime = true;
-	    if( shape && shape.params ){
-		this.updateShapes("regions", shape, "wcsconfig");
-	    }
-	    this.initRegionsForm(shape, opts);
-	});
+    JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+			   ".regionsConfigForm", () => {
+	opts.firsttime = true;
+	if( shape && shape.params ){
+	    this.updateShapes("regions", shape, "wcsconfig");
+	}
+	this.initRegionsForm(shape, opts);
+    });
     // bring up display window
     opts.winid = this.displayAnalysis("regions", s, {title, winformat});
     // save winid, if possible
     if( shape && shape.params ){
 	shape.params.winid = opts.winid;
+    }
+};
+
+JS9.Regions.saveWCSRadio = function(target, value){
+    const form = target && target.closest ? target.closest("form") : null;
+    const input = form ? form.querySelector("[name='savewcs']") : null;
+    if( input ){
+	input.value = value;
+	JS9.wrapCollection(input).trigger("change");
     }
 };
 
@@ -12290,6 +12413,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
     let i, key, val, el, el2, wcssys, twcssys, mover, mout, p1, p2, cmode;
     let s, s2, s3, s4, winid, wid, form, otitle, fav, arr, ao, grp, o, objs;
     let multi = false;
+    let formNode, winNode;
     const wcsinfo = this.raw.wcsinfo || {cdelt1: 1, cdelt2: 1};
     const defobj = {
 	type: "multi",
@@ -12312,6 +12436,15 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	}
 	return s;
     };
+    const getMeta = (key, fallback) => {
+	if( formNode && formNode[key] !== undefined ){
+	    return formNode[key];
+	}
+	return fallback;
+    };
+    const formjq = () => JS9.wrapCollection(formNode);
+    const formItems = (selector) => JS9.wrapCollection(`${form}${selector}`);
+    const wrapItem = (value) => JS9.wrapCollection(value);
     // which wcssys do we use? edit version, if available
     if( obj && obj.pub ){
 	if( obj.pub.wcsconfig && obj.pub.wcsconfig.wcssys  ){
@@ -12338,27 +12471,29 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	return;
     }
     // find the form, based on winid
-    wid = $(winid).attr("id");
+    winNode = JS9.resolveNode(winid);
+    wid = winNode && winNode.id;
+    formNode = winNode && winNode.querySelector(".regionsConfigForm");
     // leave trailing space!
     form = `#${wid} .regionsConfigForm `;
     // valid form is required
-    if( !$(form).length ){
+    if( !wid || !formNode ){
 	return;
     }
     // if the form is already a multi-select form, keep it that way
-    if( $(form).data("multi") ){
+    if( formNode._js9Multi ){
 	multi = true;
     } else {
 	multi = opts.multi;
     }
     // remove the nodisplay class from shape's div
-    $(`${form}.${obj.pub.shape}`).each((index, element) => {
-	$(element).removeClass("nodisplay");
+    formItems(`.${obj.pub.shape}`).each((index, element) => {
+	wrapItem(element).removeClass("nodisplay");
     });
     // fill in form values based on current values in the shape object
-    $(`${form}.val`).each((index, element) => {
+    formItems(".val").each((index, element) => {
 	val = "";
-	key = $(element).attr("name");
+	key = wrapItem(element).attr("name");
 	// key-specific pre-processing
 	switch(key){
 	case "x":
@@ -12450,7 +12585,8 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    if( obj.pub.color !== undefined ){
 		val = JS9.colorToHex(obj.pub.color);
 	    } else {
-		val = $(form).data("colorpicker") || JS9.globalOpts.defcolor;
+		val = getMeta("_js9Colorpicker", undefined) ||
+		    JS9.globalOpts.defcolor;
 	    }
 	    break;
 	case "color":
@@ -12458,8 +12594,8 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    if( !multi ){
 		if( obj.pub.color !== undefined ){
 		    val = fmt(obj.pub.color);
-		} else if( $(form).data("colorpicker") ){
-		    val = $(form).data("colorpicker");
+		} else if( getMeta("_js9Colorpicker", undefined) ){
+		    val = formNode._js9Colorpicker;
 		}
 	    }
 	    break;
@@ -12467,7 +12603,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    if( obj.params.sw1 ){
 		val = obj.params.sw1;
 	    } else {
-		val = $(form).data("strokewidth") || "";
+		val = getMeta("_js9Strokewidth", "") || "";
 	    }
 	    break;
 	case "strokeDashes":
@@ -12477,7 +12613,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		    val = "";
 		}
 	    } else {
-		val = $(form).data("strokedashes") || "";
+		val = getMeta("_js9Strokedashes", "") || "";
 	    }
 	    break;
 	case "regstr":
@@ -12513,7 +12649,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		}
 		break;
 	    }
-	    $(`${form}[name='${key}']`).prop("readonly", cmode);
+	    formItems(`[name='${key}']`).prop("readonly", cmode);
 	    break;
 	case "ypos":
 	    switch(wcssys){
@@ -12539,7 +12675,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		}
 		break;
 	    }
-	    $(`${form}[name='${key}']`).prop("readonly", cmode);
+	    formItems(`[name='${key}']`).prop("readonly", cmode);
 	    break;
 	case "radius":
 	case "oradius":
@@ -12566,7 +12702,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		}
 		break;
 	    }
-	    $(`${form}[name='${key}']`).prop("readonly", cmode);
+	    formItems(`[name='${key}']`).prop("readonly", cmode);
 	    break;
 	case "height":
 	case "r2":
@@ -12590,12 +12726,12 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		}
 		break;
 	    }
-	    $(`${form}[name='${key}']`).prop("readonly", cmode);
+	    formItems(`[name='${key}']`).prop("readonly", cmode);
 	    break;
 	case "wcssys":
 	case "savewcs":
 	    // add all wcs sys options
-	    el = $(form).find(`[name='${key}']`);
+	    el = formjq().find(`[name='${key}']`);
 	    if( !el.find("option").length ){
 		for(i=0; i<JS9.wcssyss.length; i++){
 		    el.append(`<option>${JS9.wcssyss[i]}</option>`);
@@ -12633,7 +12769,7 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    } else if( obj.pub.id !== undefined ){
 		val = String(obj.pub.id);
 		// set width of text input to be width of string
-		$(element).css("width", `${val.length}ch`);
+		wrapItem(element).css("width", `${val.length}ch`);
 	    }
 	    break;
 	case "tags":
@@ -12642,19 +12778,19 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    }
 	    break;
 	case "savefile":
-	    val = $(form).data("savefile")   ||
+	    val = getMeta("_js9Savefile", undefined) ||
 		  this.tmp.saveregionsFile   ||
 		  "js9.reg";
 	    break;
 	case "selectfilter":
-	    val = $(form).data("selectfilter");
+	    val = getMeta("_js9Selectfilter", undefined);
 	    break;
 	case "selectshape":
 	case "selectcolor":
 	case "selecttag":
 	case "selectwcs":
 	case "selectgroup":
-	    JS9.Regions.regionsConfigSetSelectMenu(this, $(form), key);
+	    JS9.Regions.regionsConfigSetSelectMenu(this, formjq(), key);
 	    break;
 	default:
 	    if( obj.pub[key] !== undefined ){
@@ -12662,34 +12798,34 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	    }
 	    break;
 	}
-	$(element).val(val);
+	wrapItem(element).val(val);
     });
     // display or hide options
     if( multi || !this.raw.wcs || this.raw.wcs < 0 ){
-	$(form).find("[name='wcssys']").hide();
+	formjq().find("[name='wcssys']").hide();
     }
     // edit-able parameters
     // child text display for shapes, editable if no existing children yet
     if( obj.type !== "text" && obj.params.children ){
-	$(`${form}.childtext`).removeClass("nodisplay");
+	formItems(".childtext").removeClass("nodisplay");
     }
     // init options, if necessary
     if( opts.firsttime ){
 	// multi "cur" works off selected, not current, regions
 	if( multi ){
-	    $(form).find("label[for='savecur']")
+	    formjq().find("label[for='savecur']")
 		.text("sel");
-	    $(form).find("input[id='savecur']")
+	    formjq().find("input[id='savecur']")
 		.data("tooltip", "save selected regions");
-	    $(form).find("[id='selectreg']")
+	    formjq().find("[id='selectreg']")
 		.prop("checked", true);
 	} else {
-	    $(form).find(".checkboxes").removeClass("nodisplay");
+	    formjq().find(".checkboxes").removeClass("nodisplay");
 	}
 	// add wcs button options
 	if( JS9.favorites.wcs && JS9.favorites.wcs.length ){
 	    // display wcs buttons
-	    el = $(form).find(".rwcsbuttons").removeClass("nodisplay");
+	    el = formjq().find(".rwcsbuttons").removeClass("nodisplay");
 	    // add buttons to button container, if necessary
 	    el2 = el.find(".rwcsbuttoncontainer");
 	    if( el2.length && !el2.find(".rwcsbutton").length ){
@@ -12719,31 +12855,25 @@ JS9.Regions.initConfigForm = function(obj, opts){
                                        class='rwcsradio ${s4}}'
                                        value='${s}'
                                        data-tooltip='save using ${s} wcs'
-                                       onclick='
-                                           $(this).closest("form")
-                                           .find("[name=savewcs]")
-                                           .val("${s}")
-                                           .trigger("change");'>
+                                       onclick='JS9.Regions.saveWCSRadio(this, "${s}")'>
                                 <label for='rwcsbutton_${s}'>${s2}</label>
                                 </span>`);
 		}
 		// init the radio buttons
-		$(form).find('.rwcsbuttons').find(`[value='${wcssys}']`)
+		formjq().find('.rwcsbuttons').find(`[value='${wcssys}']`)
 		    .prop('checked', true);
 	    }
 	}
 	// alternate colorpicker
 	if( !JS9.globalOpts.internalColorPicker ||
-	    !$.fn.spectrum.inputTypeColorSupport() ){
-	    el = $(form).find(`input[name='colorPicker']`)
-	    el.spectrum({showButtons: false,
-			 showInput: false,
-			 preferredFormat: "hex6"});
-	    // when the color is changed via the colorpicker
-	    el.on('move.spectrum', (evt, tinycolor) => {
-		let color = tinycolor.toHexString();
-		$(form).find("input[name='color']").val(color);
-		$(form).data("colorpicker", color);
+	    !JS9.supportsInputType("color") ){
+	    el = formNode.querySelector(`input[name='colorPicker']`);
+	    JS9.setupColorInputs(el, {
+		onMove: ({color}) => {
+		    const value = color.toHexString();
+		    formjq().find("input[name='color']").val(value);
+		    formNode._js9Colorpicker = value;
+		}
 	    });
          }
     }
@@ -12752,40 +12882,40 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	obj.params.listonchange = false;
     }
     if( obj.params.listonchange ){
-	$(`${form}[name='listonchange']`).prop("checked", true);
+	formItems(`[name='listonchange']`).prop("checked", true);
     } else {
-	$(`${form}[name='listonchange']`).prop("checked", false);
+	formItems(`[name='listonchange']`).prop("checked", false);
     }
     if( obj.params.changeable !== false ){
-	$(`${form}[name='locked']`).prop("checked", false);
+	formItems(`[name='locked']`).prop("checked", false);
     } else {
-	$(`${form}[name='locked']`).prop("checked", true);
+	formItems(`[name='locked']`).prop("checked", true);
     }
     if( obj.params.sticky ){
-	$(`${form}[name='sticky']`).prop("checked", true);
+	formItems(`[name='sticky']`).prop("checked", true);
     } else {
-	$(`${form}[name='sticky']`).prop("checked", false);
+	formItems(`[name='sticky']`).prop("checked", false);
     }
     // save regions processing
-    $(`${form}[id='includejson']`)
+    formItems(`[id='includejson']`)
 	.prop("checked", JS9.globalOpts.regIncludeJSON);
-    $(`${form}[id='includecomments']`)
+    formItems(`[id='includecomments']`)
 	.prop("checked", JS9.globalOpts.regIncludeComments);
-    $(`${form}[id='savedcoords']`)
+    formItems(`[id='savedcoords']`)
 	.prop("checked", JS9.globalOpts.regSaveDCoords);
-    $(`${form}[id='includewcs']`)
+    formItems(`[id='includewcs']`)
 	.prop("checked", JS9.globalOpts.csvIncludeWCS);
     // unset all save format radio buttons
-    $(form).find(`input[name='saveformat']`)
+    formjq().find(`input[name='saveformat']`)
 	.prop("checked", false);
     // set save format based on global value
-    $(form).find(`input[value='${JS9.globalOpts.regSaveFormat}']`)
+    formjq().find(`input[value='${JS9.globalOpts.regSaveFormat}']`)
 	.prop("checked", true);
     // unset all save wcs radio buttons
-    $(form).find(`input[name='rwcsbutton']`)
+    formjq().find(`input[name='rwcsbutton']`)
 	.prop("checked", false);
     // set save wcs based on global value
-    $(form).find(`input[value='${JS9.globalOpts.regSaveWCS||wcssys}']`)
+    formjq().find(`input[value='${JS9.globalOpts.regSaveWCS||wcssys}']`)
 	.prop("checked", true);
     // set which regions get saved
     if( opts.type === "save" ){
@@ -12793,31 +12923,31 @@ JS9.Regions.initConfigForm = function(obj, opts){
     } else {
 	s = `save${JS9.globalOpts.regSaveWhich2}`;
     }
-    $(`${form}[id='${s}']`).prop("checked", true);
+    formItems(`[id='${s}']`).prop("checked", true);
     // triggering the savefile will cause format to be updated
     // and focus to be set
     if( opts.type === "save" ){
-	$(form).find(`input[name='savefile']`).trigger("change");
+	formjq().find(`input[name='savefile']`).trigger("change");
     }
     // style menus
-    $(form).find(`input[name='strokeMenu']`).prop("selectedIndex", 0);
-    $(form).find(`input[name='dashesMenu']`).prop("selectedIndex", 0);
+    formjq().find(`input[name='strokeMenu']`).prop("selectedIndex", 0);
+    formjq().find(`input[name='dashesMenu']`).prop("selectedIndex", 0);
     // shape specific processing
     if( multi ){
-	$(form).find(".regid").hide();
-	$(form).find(".edit").hide();
-	$(form).find(".childtext").hide();
-	$(form).find(".multi").removeClass("nodisplay");
+	formjq().find(".regid").hide();
+	formjq().find(".edit").hide();
+	formjq().find(".childtext").hide();
+	formjq().find(".multi").removeClass("nodisplay");
 	if( opts.setmode <= 0 ){
-	    $(form).find(`[name='multitext']`).val("");
-	    $(form).find(`input[name="color"]`).val("");
-	    $(form).find(`input[name="strokeWidth"]`).val("");
-	    $(form).find(`input[name="strokeDashes"]`).val("");
-	    $(form).data("strokewidth", "");
-	    $(form).data("strokedashes", "");
+	    formjq().find(`[name='multitext']`).val("");
+	    formjq().find(`input[name="color"]`).val("");
+	    formjq().find(`input[name="strokeWidth"]`).val("");
+	    formjq().find(`input[name="strokeDashes"]`).val("");
+	    formNode._js9Strokewidth = "";
+	    formNode._js9Strokedashes = "";
 	    if( opts.setmode < 0 ){
-		$(form).find(`[name='selectfilter']`).val("");
-		$(form).data("selectfilter", "");
+		formjq().find(`[name='selectfilter']`).val("");
+		formNode._js9Selectfilter = "";
 	    }
 	} else {
 	    ao = this.layers.regions.canvas.getActiveObject();
@@ -12827,13 +12957,13 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		    grp = objs[0].params.groupid;
 		}
 		if( grp ){
-		    $(form).find(`[name='selectfilter']`).val(grp);
-		    $(form).data('selectfilter', grp);
+		    formjq().find(`[name='selectfilter']`).val(grp);
+		    formNode._js9Selectfilter = grp;
 		    s = this.listGroups(grp);
 		    s2 = s.substring(s.indexOf("\n")+1);
-		    $(form).find(`[name='multitext']`).val(s2);
+		    formjq().find(`[name='multitext']`).val(s2);
 		} else {
-		    $(form).find(`[name='multitext']`).val("");
+		    formjq().find(`[name='multitext']`).val("");
 		}
 	    } else if( ao ){
 		ao = this.layers.regions.canvas.getActiveObjects();
@@ -12852,48 +12982,48 @@ JS9.Regions.initConfigForm = function(obj, opts){
 		s2 = s2 + s3.substring(s3.indexOf("\n")+1);
 		if( s2 ){
 		    s4 = "selected";
-		    $(form).find(`[name='selectfilter']`).val(s4);
-		    $(form).data('selectfilter', s4);
-		    $(form).find(`[name='multitext']`).val(s2);
+		    formjq().find(`[name='selectfilter']`).val(s4);
+		    formNode._js9Selectfilter = s4;
+		    formjq().find(`[name='multitext']`).val(s2);
 		}
 	    } else {
-		s =  $(form).find(`[name='selectfilter']`).val() || "selected";
+		s =  formjq().find(`[name='selectfilter']`).val() || "selected";
 		s2 = this.listRegions(s, {mode: 1,
 					 includejson: false,
 					 includecomments: false})
 		    .replace(/ *; */g, "\n");
 		if( s2 ){
-		    $(form).find(`[name='selectfilter']`).val(s);
-		    $(form).data('selectfilter', s);
-		    $(form).find(`[name='multitext']`).val(s2);
+		    formjq().find(`[name='selectfilter']`).val(s);
+		    formNode._js9Selectfilter = s;
+		    formjq().find(`[name='multitext']`).val(s2);
 		}
 	    }
 	}
     } else {
 	// grey-out read-only text input
-	$(form).find("input:text[readonly]")
+	formjq().find("input:text[readonly]")
 	    .css("border-color", "#A5A5A5")
 	    .css("background", "#E9E9E9");
 	// regular text input
-	$(form).find("input:text:not([readonly])")
+	formjq().find("input:text:not([readonly])")
 	    .css("border-color", "#E9E9E9")
 	    .css("background", "white");
 	switch(obj.pub.shape){
 	case "box":
 	case "cross":
 	case "ellipse":
-	    $(`${form}.angle`).removeClass("nodisplay");
+	    formItems(".angle").removeClass("nodisplay");
 	    break;
 	case "text":
-	    $(`${form}.textangle`).removeClass("nodisplay");
+	    formItems(".textangle").removeClass("nodisplay");
 	    break;
 	case "line":
 	    if( obj.pub.pts && obj.pub.pts.length === 2 ){
-		$(`${form}.linelength`).removeClass("nodisplay");
-		$(`${form}.lineangle`).removeClass("nodisplay");
+		formItems(".linelength").removeClass("nodisplay");
+		formItems(".lineangle").removeClass("nodisplay");
 	    } else {
-		$(`${form}.linelength`).addClass("nodisplay");
-		$(`${form}.lineangle`).addClass("nodisplay");
+		formItems(".linelength").addClass("nodisplay");
+		formItems(".lineangle").addClass("nodisplay");
 	    }
 	    break;
 	default:
@@ -12901,18 +13031,20 @@ JS9.Regions.initConfigForm = function(obj, opts){
 	}
     }
     // save options
-    $(`${form}.xtrareg`).addClass("nodisplay");
-    $(`${form}.xtracsv`).addClass("nodisplay");
-    $(`${form}.xtrasvg`).addClass("nodisplay");
-    $(`${form}.xtra${JS9.globalOpts.regSaveFormat}`).removeClass("nodisplay");
+    formItems(".xtrareg").addClass("nodisplay");
+    formItems(".xtracsv").addClass("nodisplay");
+    formItems(".xtrasvg").addClass("nodisplay");
+    formItems(`.xtra${JS9.globalOpts.regSaveFormat}`).removeClass("nodisplay");
     // save image for later processing
-    $(form).data("im", this);
+    formNode._js9Image = this;
+    formjq().data("im", this);
     // save shape object for later processing
-    $(form).data("shape", obj);
+    formNode._js9Shape = obj;
+    formjq().data("shape", obj);
     // save the window id for later processing
-    $(form).data("winid", winid);
+    formNode._js9Winid = winid;
     // save multi state for later processing
-    $(form).data("multi", multi);
+    formNode._js9Multi = multi;
     // even triggers
     if( JS9.BROWSER[3] ){
 	mover = "touchstart";
@@ -12923,35 +13055,36 @@ JS9.Regions.initConfigForm = function(obj, opts){
     }
     // for save form, focus on filename
     if( opts.type === "save" ){
-	$(form).on(mover, () => {
-	    $(form).find(`input[name='savefile']`).focus();
+	formjq().on(mover, () => {
+	    formjq().find(`input[name='savefile']`).focus();
 	});
     }
     // add tooltip callbacks (not mobile: ios buttons stop working!)
-    if( !$(form).data("tooltipInit") ){
-	$(form).data("tooltipInit", true);
-	$(".rconfigcol_R, .rsavecol_R").on(mover, (e) => {
+    if( !formNode._js9TooltipInit ){
+	formNode._js9TooltipInit = true;
+	formjq().data("tooltipInit", true);
+	JS9.wrapCollection(".rconfigcol_R, .rsavecol_R").on(mover, (e) => {
 	    const target = e.currentTarget;
-	    const tooltip = $(target)
+	    const tooltip = wrapItem(target)
 		  .find("input, textarea, span")
 		  .data("tooltip");
-	    const el = $(target)
+	    const el = wrapItem(target)
 		  .closest(JS9.lightOpts[JS9.LIGHTWIN].top)
 		  .find(JS9.lightOpts[JS9.LIGHTWIN].dragBar);
 	    if( tooltip && el.length ){
 		// change title: see dhtmlwindow.js load() @line 130
-		otitle = $(el)[0].childNodes[0].nodeValue.replace(/:.*/,"");
-		$(el)[0].childNodes[0].nodeValue = `${otitle}: ${tooltip}`;
+		otitle = el[0].childNodes[0].nodeValue.replace(/:.*/,"");
+		el[0].childNodes[0].nodeValue = `${otitle}: ${tooltip}`;
 	    }
 	});
-	$(".rconfigcol_R, .rsavecol_R").on(mout, (e) => {
+	JS9.wrapCollection(".rconfigcol_R, .rsavecol_R").on(mout, (e) => {
 	    const target = e.currentTarget;
-	    const el = $(target)
+	    const el = wrapItem(target)
 		  .closest(JS9.lightOpts[JS9.LIGHTWIN].top)
 		  .find(JS9.lightOpts[JS9.LIGHTWIN].dragBar);
 	    if( el.length ){
-		otitle = $(el)[0].childNodes[0].nodeValue.replace(/:.*/,"");
-		$(el)[0].childNodes[0].nodeValue = otitle;
+		otitle = el[0].childNodes[0].nodeValue.replace(/:.*/,"");
+		el[0].childNodes[0].nodeValue = otitle;
 	    }
 	});
     }
@@ -12970,6 +13103,7 @@ JS9.Regions.processConfigForm = function(form, obj, arr){
     };
     const alen = arr.length;
     const opts = {};
+    const formNode = JS9.resolveNode(form);
     const wcsinfo = this.raw.wcsinfo || {cdelt1: 1, cdelt2: 1};
     const fmt= (val) => {
 	if( val === undefined ){
@@ -13038,10 +13172,9 @@ JS9.Regions.processConfigForm = function(form, obj, arr){
 	    return true;
 	}
 	if( key === "radii" && obj.params.radii ){
-	    // https://stackoverflow.com/questions/1773069/using-jquery-to-compare-two-arrays-of-javascript-objects
 	    // v1 = val.split(",").map((item) => {return parseFloat(item)});
 	    // v2 = obj.params.radii;
-	    // return $(v1).not(v2).length !== 0 || $(v2).not(v1).length !== 0;
+	    // legacy set-difference check kept here for reference only
 	    // always return true or else annuli won't change other properties
 	    return true;
 	}
@@ -13167,7 +13300,9 @@ JS9.Regions.processConfigForm = function(form, obj, arr){
 	obj = defobj;
     }
     // multi selection or single region
-    multi = $(form).data("multi");
+    multi = formNode && formNode._js9Multi !== undefined ?
+	formNode._js9Multi :
+	JS9.wrapCollection(form).data("multi");
     // layer or regions
     layer = obj.pub.layer || "regions";
     // process array of keyword/values
@@ -13221,9 +13356,9 @@ JS9.Regions.processConfigForm = function(form, obj, arr){
 	    }
 	    break;
 	case "selectfilter":
-	    if( val && val !== $(form).data('selectfilter') ){
+	    if( formNode && val && val !== formNode._js9Selectfilter ){
 		// save current filter
-		$(form).data('selectfilter', val);
+		formNode._js9Selectfilter = val;
 		// make selection
 		if( this.lookupGroup(val) ){
 		    this.groupShapes(layer, val);
@@ -13521,10 +13656,11 @@ JS9.Regions.processConfigForm = function(form, obj, arr){
     // change the shape(s), if necessary
     if( Object.keys(opts).length > 0 ){
 	if( multi ){
-	    sel = $(form).find(`[name='selectfilter']`).val() || "selected";
+	    sel = ((formNode && formNode.querySelector(`[name='selectfilter']`)) || {}).value ||
+		"selected";
 	    this.changeShapes(layer, sel, opts);
 	} else {
-	    sel = $(form).find(`[name='id']`).val() || obj;
+	    sel = ((formNode && formNode.querySelector(`[name='id']`)) || {}).value || obj;
 	    this.changeShapes(layer, sel, opts);
 	}
 	this.initRegionsForm(obj, {multi});
@@ -14896,6 +15032,7 @@ JS9.Plot.expfunc = function(v) { return v === 0 ? 0 : Math.exp(v); };
 // rescale a plot
 JS9.Plot.rescale = function (divjq, plot, pobj, axis, scale, smin, smax){
     let opts, curaxis;
+    const plotNode = JS9.resolveNode(divjq);
     // change the scale
     switch( JS9.globalOpts.plotLibrary ){
     case "flot":
@@ -14943,7 +15080,9 @@ JS9.Plot.rescale = function (divjq, plot, pobj, axis, scale, smin, smax){
 	    pobj.curscale[axis] = scale;
 	    break;
 	}
-	Plotly.restyle(divjq.attr("id"), opts);
+	if( plotNode ){
+	    Plotly.restyle(plotNode.id, opts);
+	}
 	break;
     default:
 	break;
@@ -14956,6 +15095,7 @@ JS9.Plot.annotate = function (divjq, plot, pobj){
     const annotations = [];
     const data = pobj.data;
     const ac = pobj.annotations.color || JS9.Plot.opts.annotateColor;
+    const plotNode = JS9.resolveNode(divjq);
     const getPos = (ann, data) => {
 	let i, x, y;
 	if( !ann.text ){
@@ -14977,18 +15117,24 @@ JS9.Plot.annotate = function (divjq, plot, pobj){
     switch( JS9.globalOpts.plotLibrary ){
     case "flot":
 	yTextOffset = -25;
-	divjq.find(".plotAnnotation").remove();
+	if( !plotNode ){
+	    return;
+	}
+	plotNode.querySelectorAll(".plotAnnotation").forEach((node) => {
+	    node.remove();
+	});
 	for(i=0; i<pobj.annotations.data.length; i++){
 	    ann = pobj.annotations.data[i];
 	    pos = getPos(ann, data);
 	    ao = plot.pointOffset({ x: pos.x, y: pos.y });
-	    if( (ao.left < 0) || (ao.left > divjq.width()) ){
+	    if( (ao.left < 0) ||
+		(ao.left > (plotNode.getBoundingClientRect().width || plotNode.offsetWidth)) ){
 		continue;
 	    }
 	    ahtml = sprintf("<div class='plotAnnotation' style='position: absolute; left: %spx; top:%spx; color: %s; font-size: small'>%s</div>",
 			    ao.left, ao.top+yTextOffset,
 			    ac, `&darr;${ann.text}`);
-	    divjq.append(ahtml);
+	    plotNode.insertAdjacentHTML("beforeend", ahtml);
 	}
 	break;
     case "plotly":
@@ -15011,7 +15157,8 @@ JS9.Plot.annotate = function (divjq, plot, pobj){
 // init the plot config form: called with the image context
 // eslint-disable-next-line no-unused-vars
 JS9.Plot.initConfigForm = function(plot, pobj){
-    let val, key, mover, mout, winid, wid, form;
+    let val, key, mover, mout, winid, wid, formNode, winNode;
+    let titleNode;
     const fmt= (val) => {
 	if( val === undefined ){
 	    return undefined;
@@ -15025,14 +15172,15 @@ JS9.Plot.initConfigForm = function(plot, pobj){
     if( !plot || !pobj ){ return; }
     // convenience variables
     winid = plot.winid;
-    wid = $(winid).attr("id");
-    form = `#${wid} #plotConfigForm `;
+    winNode = JS9.resolveNode(winid);
+    wid = winNode && winNode.id;
+    formNode = winNode && winNode.querySelector("#plotConfigForm");
     // flot support only for now ...
-    if( JS9.globalOpts.plotLibrary !== "flot" ){ return; }
+    if( JS9.globalOpts.plotLibrary !== "flot" || !wid || !formNode ){ return; }
     // fill in the values from the plot
-    $(`${form}.val`).each((index, element) => {
+    formNode.querySelectorAll(".val").forEach((element) => {
 	val = "";
-	key = $(element).attr("name");
+	key = element.name;
 	// key-specific pre-processing
 	switch(key){
 	case "xscale":
@@ -15068,19 +15216,16 @@ JS9.Plot.initConfigForm = function(plot, pobj){
 	default:
 	    break;
 	}
-	$(element).val(val);
+	element.value = val;
     });
     // save the image for later processing
-    $(form).data("im", this);
-    // save the plot object for later processing
-    $(form).data("plot", plot);
-    // save the plot opts object for later processing
-    $(form).data("pobj", pobj);
-    // save the window id for later processing
-    $(form).data("winid", winid);
+    formNode._js9Image = this;
+    formNode._js9Plot = plot;
+    formNode._js9Pobj = pobj;
+    formNode._js9Winid = winid;
     // add tooltip callbacks (not mobile: ios buttons stop working!)
-    if( !$(form).data("tooltipInit") ){
-	$(form).data("tooltipInit", true);
+    if( !formNode._js9TooltipInit ){
+	formNode._js9TooltipInit = true;
 	if( JS9.BROWSER[3] ){
 	    mover = "touchstart";
 	    mout = "touchend";
@@ -15088,27 +15233,23 @@ JS9.Plot.initConfigForm = function(plot, pobj){
 	    mover = "mouseover";
 	    mout = "mouseout";
 	}
-	$(".plotcol_P").on(mover, (e) => {
-	    let title;
-	    const target = e.currentTarget;
-	    const tooltip = $(target).find("input").data("tooltip");
-	    const el = $(target)
-		  .closest(JS9.lightOpts[JS9.LIGHTWIN].top)
-		  .find(JS9.lightOpts[JS9.LIGHTWIN].dragBar);
-	    if( tooltip && el.length ){
-		// change title: see dhtmlwindow.js load() @line 130
-		title = `${JS9.Plot.opts.title}: ${tooltip}`;
-		$(el)[0].childNodes[0].nodeValue = title;
-	    }
-	});
-	$(".plotcol_P").on(mout, (e) => {
-	    const target = e.currentTarget;
-	    const el = $(target)
-		  .closest(JS9.lightOpts[JS9.LIGHTWIN].top)
-		  .find(JS9.lightOpts[JS9.LIGHTWIN].dragBar);
-	    if( el.length ){
-		$(el)[0].childNodes[0].nodeValue = JS9.Plot.opts.title;
-	    }
+	titleNode = winNode.querySelector(JS9.lightOpts[JS9.LIGHTWIN].dragBar);
+	formNode.querySelectorAll(".plotcol_P").forEach((target) => {
+	    target.addEventListener(mover, (e) => {
+		let title;
+		const input = e.currentTarget.querySelector("input");
+		const tooltip = input ? input.dataset.tooltip : "";
+		if( tooltip && titleNode && titleNode.childNodes[0] ){
+		    // change title: see dhtmlwindow.js load() @line 130
+		    title = `${JS9.Plot.opts.title}: ${tooltip}`;
+		    titleNode.childNodes[0].nodeValue = title;
+		}
+	    });
+	    target.addEventListener(mout, () => {
+		if( titleNode && titleNode.childNodes[0] ){
+		    titleNode.childNodes[0].nodeValue = JS9.Plot.opts.title;
+		}
+	    });
 	});
     }
 };
@@ -15892,16 +16033,21 @@ JS9.Dysel.init = function(opts){
 
 // unhighlight current selection
 JS9.Dysel.unhighlightSelection = function(){
+    let nodes;
     if( JS9.bugs.webkit_resize ){
-	$(".JS9").find(".JS9Image").removeClass("JS9Highlight");
+	nodes = document.querySelectorAll(".JS9 .JS9Image");
     } else {
-	$(".JS9").removeClass("JS9Highlight");
+	nodes = document.querySelectorAll(".JS9");
     }
+    nodes.forEach((node) => {
+	node.classList.remove("JS9Highlight");
+    });
 };
 
 // highlight display when dynamic selection is made
 JS9.Dysel.highlightSelection = function(im){
     let disp;
+    let node;
     // sanity check
     if( !im || !JS9.Dysel.retrievePlugins().length ){ return; }
     // optimization: no processing if we only have one display
@@ -15912,9 +16058,17 @@ JS9.Dysel.highlightSelection = function(im){
     disp = im.display;
     // highlight selected
     if( JS9.bugs.webkit_resize ){
-	$(disp.divjq).find(".JS9Image").addClass("JS9Highlight");
+	node = JS9.resolveNode(disp.divjq);
+	if( node ){
+	    node.querySelectorAll(".JS9Image").forEach((imageNode) => {
+		imageNode.classList.add("JS9Highlight");
+	    });
+	}
     } else {
-	$(disp.divjq).addClass("JS9Highlight");
+	node = JS9.resolveNode(disp.divjq);
+	if( node ){
+	    node.classList.add("JS9Highlight");
+	}
     }
 };
 
@@ -16198,17 +16352,15 @@ JS9.memcpy = function(dst, dstOffset, src, srcOffset, length){
 
 // set explicit focus for IPython/Jupyter support
 JS9.jupyterFocus = function(el, el2){
-    let eljq;
+    let root;
     if( {}.hasOwnProperty.call(window, "Jupyter") ){
-	if( JS9.isJQueryObject(el) ){
-	    eljq = el;
-	} else {
-	    eljq = $(el);
-	}
+	root = JS9.resolveNode(el);
 	el2 = el2 || "input, textarea";
-	eljq.find(el2).each((index, element) => {
-	    Jupyter.keyboard_manager.register_events($(element));
-	});
+	if( root ){
+	    root.querySelectorAll(el2).forEach((element) => {
+		Jupyter.keyboard_manager.register_events(element);
+	    });
+	}
     }
 };
 
@@ -16250,22 +16402,23 @@ JS9.uniqueID = (function(){
 // change cursor to waiting/not waiting
 JS9.waiting = function(mode, display){
     let el, opts, tdisp;
+    const body = document.body;
     switch(mode){
     case true:
 	if( {}.hasOwnProperty.call(window, "Spinner") &&
 	    (JS9.globalOpts.waitType === "spinner")   ){
 	    if( display ){
 		if( typeof display === "object" ){
-		    el = display.divjq[0];
+		    el = JS9.resolveNode(display.divjq);
 		} else if( typeof display === "string" ){
 		    tdisp = JS9.lookupDisplay(display);
 		    if( tdisp ){
-			el = tdisp.divjq[0];
+			el = JS9.resolveNode(tdisp.divjq);
 		    }
 		}
 	    }
 	    if( !el ){
-		el = $("body").get(0);
+		el = body;
 	    }
 	    if( !JS9.spinner ){
 		JS9.spinner = {};
@@ -16275,7 +16428,9 @@ JS9.waiting = function(mode, display){
 	    }
 	    JS9.spinner.spinner.spin(el);
 	} else {
-	    $("body").addClass("waiting");
+	    if( body ){
+		body.classList.add("waiting");
+	    }
 	}
 	break;
     case false:
@@ -16285,7 +16440,9 @@ JS9.waiting = function(mode, display){
 		JS9.spinner.spinner.stop();
 	    }
 	} else {
-	    $("body").removeClass("waiting");
+	    if( body ){
+		body.classList.remove("waiting");
+	    }
 	}
 	break;
     }
@@ -16485,6 +16642,9 @@ JS9.msgHandler = function(msg, cb){
 // someday we might want other options ...
 JS9.lightWin = function(id, type, s, title, winformat){
     let rval;
+    let node;
+    let dragBars;
+    const qsel = `#${id} `;
     // winformat is optional
     winformat = winformat || "";
     // create the light window
@@ -16498,30 +16658,34 @@ JS9.lightWin = function(id, type, s, title, winformat){
 	rval = dhtmlwindow.open(id, type, s, title, winformat);
 	// override dhtml to add ios scroll capability
 	if(  /iPad|iPhone|iPod/.test(navigator.platform) ){
-	    $(`#${id} ${JS9.lightOpts[JS9.LIGHTWIN].drag}`)
-		.css("-webkit-overflow-scrolling", "touch")
-		.css("overflow-y", "scroll");
+	    node = document.querySelector(qsel + JS9.lightOpts[JS9.LIGHTWIN].drag);
+	    if( node ){
+		node.style.webkitOverflowScrolling = "touch";
+		node.style.overflowY = "scroll";
+	    }
 	}
 	// allow double-click or double-tap to close ...
 	// ... the close button is unresponsive on the ipad/iphone
-        $(`#${id} ${JS9.lightOpts[JS9.LIGHTWIN].dragBar}`)
-	    .on("dblclick", () => {
+	dragBars = document.querySelectorAll(qsel + JS9.lightOpts[JS9.LIGHTWIN].dragBar);
+	dragBars.forEach((dragBar) => {
+	    dragBar.addEventListener("dblclick", () => {
 		rval.close();
-	    })
-	    .on("touchend", (e) => {
+	    });
+	    dragBar.addEventListener("touchend", (e) => {
 		const curtime = (new Date()).getTime();
-		const lasttime = $(e.currentTarget).data("lasttime");
+		const lasttime = parseInt(e.currentTarget.dataset.lasttime || "", 10);
 		if( lasttime                             &&
 		    (curtime - lasttime) > JS9.DBLCLICK0 &&
 		    (curtime - lasttime) < JS9.DBLCLICK  ){
 		    rval.close();
 		}
-		$(e.currentTarget).data("lasttime", curtime);
+		e.currentTarget.dataset.lasttime = String(curtime);
 	    });
+	});
 	// if ios user failed to close the window via the close button,
 	// give a hint (once per session only!)
-        $(`#${id} ${JS9.lightOpts[JS9.LIGHTWIN].dragBar}`)
-	    .on("touchend", () => {
+	dragBars.forEach((dragBar) => {
+	    dragBar.addEventListener("touchend", () => {
 		// skip check if we are dragging
 		if( !dhtmlwindow.distancex  && !dhtmlwindow.distancey ){
 		    if( JS9.lightOpts.nclick >= 2 ){
@@ -16538,6 +16702,7 @@ JS9.lightWin = function(id, type, s, title, winformat){
 		    }
 		}
 	    });
+	});
         break;
     default:
         break;
@@ -16550,6 +16715,66 @@ JS9.checkNew = function(obj){
     if( !obj ){
 	JS9.error("internal failure in a JS9 constructor");
     }
+};
+
+JS9.resolveNode = function(value){
+    if( !value ){
+	return null;
+    }
+    if( JS9.isWrappedCollection(value) ){
+	return value[0];
+    }
+    if( typeof value === "string" ){
+	return value.charAt(0) === "#" ?
+	    document.querySelector(value) :
+	    document.getElementById(value);
+    }
+    return value;
+};
+
+JS9.getNodeOffset = function(value){
+    const node = JS9.resolveNode(value);
+    let rect;
+    if( !node || !node.getBoundingClientRect ){
+	return {left: 0, top: 0};
+    }
+    rect = node.getBoundingClientRect();
+    return {
+	left: rect.left + window.pageXOffset,
+	top: rect.top + window.pageYOffset
+    };
+};
+
+JS9.isVisibleNode = function(value){
+    const node = JS9.resolveNode(value);
+    let style;
+    if( !node ){
+	return false;
+    }
+    style = window.getComputedStyle(node);
+    return style.display !== "none" &&
+	style.visibility !== "hidden" &&
+	node.getClientRects().length > 0;
+};
+
+JS9.onElementAvailable = function(rootSelector, selector, callback){
+    let target;
+    const root = JS9.resolveNode(rootSelector);
+    if( !root || typeof MutationObserver === "undefined" ){
+	return;
+    }
+    target = root.querySelector(selector);
+    if( target ){
+	callback(target);
+	return;
+    }
+    (new MutationObserver((mutations, observer) => {
+	target = root.querySelector(selector);
+	if( target ){
+	    observer.disconnect();
+	    callback(target);
+	}
+    })).observe(root, {childList: true, subtree: true});
 };
 
 // desperate attempt to regularize the control/meta key
@@ -16599,7 +16824,7 @@ JS9.lookupImage = function(id, display){
 	    (id === im.file0) || (id === (JS9.TOROOT + im.file))         ||
 	    (im.fitsFile      && (id === im.fitsFile)) ){
 	    // make sure the display still exists (light windows disappear)
-	    if( $(`#${im.display.id}`).length > 0 ){
+	    if( JS9.resolveNode(im.display.id) ){
 		did = im.display.id;
 		if( !display                                            ||
 		    (typeof display === "string" && display === did)    ||
@@ -17206,7 +17431,6 @@ JS9.log = function(...args){
 };
 
 // we use keydown instead of keypress, so we need ...
-// http://stackoverflow.com/questions/2220196/how-to-decode-character-pressed-from-jquerys-keydowns-event-handler
 // ... for conversion of keydown into char string
 JS9.eventToCharStr = function(evt){
     let c, s;
@@ -17303,7 +17527,7 @@ JS9.eventToDisplayPos = function(evt, offset){
         targ = targ.parentNode;
     }
     // offset() returns the position of the element relative to the document
-    offset = offset || $(targ).offset();
+    offset = offset || JS9.getNodeOffset(targ);
     // pageX, pageY: mouse positions relative to the document
     // changed touch events: take position from first finger
     if( evt.originalEvent ){

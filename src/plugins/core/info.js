@@ -2,9 +2,13 @@
  * Info plugin
  */
 
-/*global $, JS9, jQuery, sprintf */
+/*global JS9, sprintf */
 
 "use strict";
+
+const wrapInfoTarget = function(value){
+    return JS9.wrapCollection(value);
+};
 
 // create our namespace, and specify some meta-information and params
 JS9.Info = {};
@@ -90,12 +94,13 @@ JS9.Info.init = function(){
     this.divjq.css("height", this.height);
     this.height = parseInt(this.divjq.css("height"), 10);
     // add container to the high-level div
-    this.infoConjq = $("<div>")
-	.addClass("JS9Container")
-	.append(infoHTML)
-	.appendTo(this.divjq);
-    // save the jquery element for later processing
-    this.jq = this.infoConjq.find("[name='info']");
+    this.div.innerHTML = "";
+    this.infoConjq = document.createElement("div");
+    this.infoConjq.className = "JS9Container";
+    this.infoConjq.innerHTML = infoHTML;
+    this.div.appendChild(this.infoConjq);
+    // save the wrapped element for later processing
+    this.jq = wrapInfoTarget(this.infoConjq.querySelector("[name='info']"));
 };
 
 // display a message on the image canvas or info plugin
@@ -123,12 +128,12 @@ JS9.Info.display = function(type, message, target, force){
 	    // passed disp in as a target
 	    tobj = disp;
 	    target = null;
-	} else if( target instanceof jQuery ){
+	} else if( JS9.isWrappedCollection(target) ){
 	    tobj = target;
 	} else if( typeof target === "object" ){
-	    tobj = $(target);
+	    tobj = wrapInfoTarget(target);
 	} else {
-	    tobj = $(`#${target}`);
+	    tobj = wrapInfoTarget(JS9.resolveNode(target));
 	}
 	if( !tobj.length ){
 	    // fallback if the target element does not exist
@@ -221,16 +226,16 @@ JS9.Info.display = function(type, message, target, force){
 	// display regions in a light window?
 	if( JS9.globalOpts.regDisplay === "lightwin" ){
 	    rid = `${disp.id}_regions`;
-	    el = $(`#${rid}`);
+	    el = wrapInfoTarget(JS9.resolveNode(rid));
 	    // does window exist (and is not closed)?
 	    if( el.length && !el[0].isClosed ){
 		// found the window: fill the message area
 		area = el.find(".JS9Message");
 	    } else if( message ) {
 		// start a light window and recurse to display the message
-		$(JS9.lightOpts[JS9.LIGHTWIN].topid).arrive(`#${rid}`,
-	        { fireOnAttributesModification: true },
-	        () => {
+		JS9.onElementAvailable(JS9.lightOpts[JS9.LIGHTWIN].topid,
+				       `#${rid}`,
+				       () => {
 		    JS9.Info.display.call(this, type, message, target, force);
 		});
 		t = "Regions";
