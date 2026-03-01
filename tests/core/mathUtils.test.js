@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 beforeAll(async () => {
-  await import("../../src/core/mathUtils.js");
+  await import("../../src/core/mathUtils.ts");
 });
 
 describe("JS9MathUtils", () => {
@@ -34,4 +34,3 @@ describe("JS9MathUtils", () => {
     expect(utils.centroidPolygon(square, true)).toEqual({ x: 1, y: 1 });
   });
 });
-

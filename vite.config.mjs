@@ -21,7 +21,7 @@ export default defineConfig({
     viteStaticCopy({
       targets: copyEntries.map((entry) => {
         const target = {
-          src: entry.src,
+          src: resolve(__dirname, entry.src),
           dest: entry.dest
         }
         if (entry.rename) {
@@ -35,7 +35,7 @@ export default defineConfig({
     outDir: 'dist/library',
     emptyOutDir: true,
     lib: {
-      entry: resolve(__dirname, 'src/lib/index.js'),
+      entry: resolve(__dirname, 'src/lib/index.ts'),
       name: 'JS9Library',
       formats: ['es', 'umd'],
       fileName: (format) => `js9.${format}.js`

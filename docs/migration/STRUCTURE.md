@@ -10,12 +10,11 @@
 ## Layout
 
 - `src/`
-  - `lib/index.js` (library API)
-  - `viewer.js`
+  - `lib/index.ts` (library API)
+  - `viewer.ts`
   - `worker.ts`
-  - `worker.js`
-  - `postMessage.js`
-  - `core/basicUtils.js`
+  - `postMessage.ts`
+  - `core/basicUtils.ts`
 - `demo-vue/`
   - Vue-based demo app consuming the library API
 

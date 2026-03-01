@@ -1,10 +1,11 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { loadCoreBasicUtils } from "./loadCoreBasicUtils.js";
 
-const installCoreBasicUtils = loadCoreBasicUtils();
+let installCoreBasicUtils;
 
 beforeAll(async () => {
-  await import("../../src/core/viewerUtils.js");
+  installCoreBasicUtils = await loadCoreBasicUtils();
+  await import("../../src/core/viewerUtils.ts");
 });
 
 function installViewerUtils(overrides = {}) {

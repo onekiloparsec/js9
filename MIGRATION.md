@@ -17,18 +17,19 @@ Companion docs:
 
 Edit source here:
 
-- `src/lib/index.js` (library loader API)
-- `src/viewer.js`
+- `src/lib/index.ts` (library loader API)
+- `src/viewer.ts`
 - `src/worker.ts`
-- `src/core/basicUtils.js`
-- `src/postMessage.js`
+- `src/core/basicUtils.ts`
+- `src/postMessage.ts`
 - `demo-vue/*`
 
 Generated or distribution artifacts (do not edit directly):
 
 - `dist/library/*`
 - `dist/demo/*`
-- legacy runtime bundles in `runtime/`
+- generated runtime bundles in `generated/runtime/`
+- copied browser runtime assets in `runtime/`
 
 ## Build Commands
 

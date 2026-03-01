@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from "vue";
-import { loadJS9Runtime } from "../../src/lib/index.js";
+import { loadJS9Runtime } from "../../src/lib/index.ts";
 
 const status = ref("Loading JS9 runtime...");
 

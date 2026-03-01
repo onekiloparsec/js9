@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { loadCoreBasicUtils } from "./loadCoreBasicUtils.js";
 
 describe("CoreBasicUtils", () => {
-  it("installs primitive null/number helpers", () => {
-    const install = loadCoreBasicUtils();
+  it("installs primitive null/number helpers", async () => {
+    const install = await loadCoreBasicUtils();
     const JS9 = {};
     install(JS9);
 
@@ -21,8 +21,8 @@ describe("CoreBasicUtils", () => {
     expect(JS9.defNull("value", "fallback")).toBe("value");
   });
 
-  it("installs WCS-system classification helpers", () => {
-    const install = loadCoreBasicUtils();
+  it("installs WCS-system classification helpers", async () => {
+    const install = await loadCoreBasicUtils();
     const JS9 = {};
     install(JS9);
 
@@ -32,8 +32,8 @@ describe("CoreBasicUtils", () => {
     expect(JS9.notWCS("icrs")).toBe(false);
   });
 
-  it("installs collection/object helper utilities", () => {
-    const install = loadCoreBasicUtils();
+  it("installs collection/object helper utilities", async () => {
+    const install = await loadCoreBasicUtils();
     const JS9 = {};
     install(JS9);
 

@@ -4,7 +4,8 @@
     "noEmit": true
   },
   "include": [
-    "src/worker.ts"
+    "src/**/*.ts",
+    "src/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules"

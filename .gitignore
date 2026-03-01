@@ -35,3 +35,4 @@ node_modules/
 dist-vite/
 dist/
 coverage/
+generated/
