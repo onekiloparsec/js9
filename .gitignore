@@ -36,3 +36,4 @@ dist-vite/
 dist/
 coverage/
 generated/
+.generated/

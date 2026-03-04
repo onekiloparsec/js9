@@ -6,7 +6,10 @@
       "Bash(ls:*)",
       "Bash(grep:*)",
       "Bash(done)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(grep -r \"css/\" /Users/onekiloparsec/code/js9/src/core/browserCompat.ts | head -5\ngrep -r \"dhtmlwindow\\\\|spectrum\\\\|tabcontent\\\\|contextMenu\" /Users/onekiloparsec/code/js9/src/core/inlineAssets.ts 2>/dev/null | head -5\nhead -30 /Users/onekiloparsec/code/js9/src/core/inlineAssets.ts)",
+      "Bash(grep -rn \"css/\" /Users/onekiloparsec/code/js9/src/core/browserCompat.ts | head -5\ngrep -rn \"dhtmlwindow\\\\.css\\\\|spectrum\\\\.css\\\\|tabcontent\\\\.css\\\\|contextMenu.*css\" /Users/onekiloparsec/code/js9/src/ 2>/dev/null | grep -v \"node_modules\" | head -10)",
+      "Bash(git:*)"
     ]
   }
 }
