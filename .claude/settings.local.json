@@ -5,7 +5,8 @@
       "Bash(npm run:*)",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(python3:*)"
     ]
   }
 }
