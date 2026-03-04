@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/library",
+    "rootDir": "src/lib",
+    "noEmitOnError": true
+  },
+  "include": [
+    "src/lib/**/*.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

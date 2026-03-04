@@ -1,34 +1,30 @@
-// @ts-nocheck
-// fast gausian blur
+// fast gaussian blur
 // taken from: blog.ivank.net/fastest-gaussian-blur.html
 // (and http://elynxsdk.free.fr/ext-docs/Blur/Fast_box_blur.pdf)
 // modified by: Eric Mandel (2/16/2016):
 //   -- to use floating point data arrays
 //   -- to ignore NaN values by converting them to 0
-var gaussBlur = (function(){
 
-function gaussBlur (scl, tcl, w, h, r) {
+export function gaussBlur (scl: number[], tcl: number[], w: number, h: number, r: number): void {
     var bxs = boxesForGauss(r, 3);
     boxBlur (scl, tcl, w, h, (bxs[0]-1)/2);
     boxBlur (tcl, scl, w, h, (bxs[1]-1)/2);
     boxBlur (scl, tcl, w, h, (bxs[2]-1)/2);
 }
 
-function boxesForGauss(sigma, n)  // standard deviation, number of boxes
-{
-    var wIdeal = Math.sqrt((12*sigma*sigma/n)+1);  // Ideal averaging filter width 
+function boxesForGauss(sigma: number, n: number): number[] {
+    var wIdeal = Math.sqrt((12*sigma*sigma/n)+1);  // Ideal averaging filter width
     var wl = Math.floor(wIdeal);  if(wl%2==0) wl--;
     var wu = wl+2;
-				
+
     var mIdeal = (12*sigma*sigma - n*wl*wl - 4*n*wl - 3*n)/(-4*wl - 4);
     var m = Math.round(mIdeal);
-    // var sigmaActual = Math.sqrt( (m*wl*wl + (n-m)*wu*wu - n)/12 );
-				
-    var sizes = [];  for(var i=0; i<n; i++) sizes.push(i<m?wl:wu);
+
+    var sizes: number[] = [];  for(var i=0; i<n; i++) sizes.push(i<m?wl:wu);
     return sizes;
 }
 
-function boxBlur (scl, tcl, w, h, r) {
+function boxBlur (scl: number[], tcl: number[], w: number, h: number, r: number): void {
     for(var i=0; i<scl.length; i++){
 	if( scl[i] === scl[i] ){
 	    tcl[i] = scl[i];
@@ -40,7 +36,7 @@ function boxBlur (scl, tcl, w, h, r) {
     boxBlurT(scl, tcl, w, h, r);
 }
 
-function boxBlurH (scl, tcl, w, h, r) {
+function boxBlurH (scl: number[], tcl: number[], w: number, h: number, r: number): void {
     var iarr = 1 / (r+r+1);
     for(var i=0; i<h; i++) {
         var ti = i*w, li = ti, ri = ti+r;
@@ -52,7 +48,7 @@ function boxBlurH (scl, tcl, w, h, r) {
     }
 }
 
-function boxBlurT (scl, tcl, w, h, r) {
+function boxBlurT (scl: number[], tcl: number[], w: number, h: number, r: number): void {
     var iarr = 1 / (r+r+1);
     for(var i=0; i<w; i++) {
         var ti = i, li = ti, ri = ti+r*w;
@@ -63,9 +59,3 @@ function boxBlurT (scl, tcl, w, h, r) {
         for(var j=h-r; j<h  ; j++) { val += lv      - scl[li];  tcl[ti] = val*iarr;  li+=w; ti+=w; }
     }
 }
-
-return gaussBlur;
-
-}());
-
-

@@ -1,7 +1,8 @@
 // @ts-nocheck
 /* JS9 viewer utilities extracted from viewer.js. */
+import { sprintf } from './sprintf';
 
-/*global sprintf, tinycolor, CanvasRenderingContext2D */
+/*global tinycolor, CanvasRenderingContext2D */
 
 "use strict";
 

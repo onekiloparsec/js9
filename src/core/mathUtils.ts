@@ -1,13 +1,11 @@
-// @ts-nocheck
 /* JS9 core math/format helpers extracted from viewer.js. */
-
-/*global sprintf */
+import { sprintf } from './sprintf';
 
 "use strict";
 
 const JS9MathUtils = {
   // ints remain ints, floats get truncated at configured significant digits
-  floatToString(fval, floatPrecision) {
+  floatToString(fval: unknown, floatPrecision: number): string {
     if (typeof fval === "number") {
       return sprintf("%g", parseFloat(fval.toFixed(floatPrecision)));
     }
@@ -18,15 +16,15 @@ const JS9MathUtils = {
   },
 
   // figure out precision from range of values (used by colorbar)
-  floatPrecision(fval1, fval2) {
+  floatPrecision(fval1: number, fval2: number): number {
     const aa = Math.floor(Math.log10(Math.abs(fval1)));
     const bb = Math.floor(Math.log10(Math.abs(fval2)));
     return Math.max(aa, bb);
   },
 
   // convert float value to a string with decent precision
-  floatFormattedString(fval, prec, jj) {
-    let fmt;
+  floatFormattedString(fval: number | undefined, prec: number, jj: number): string {
+    let fmt: string;
     let s = "";
     if (fval === undefined) {
       return s;
@@ -49,12 +47,12 @@ const JS9MathUtils = {
   },
 
   // center of bounding box surrounding a polygon
-  centerPolygon(points) {
-    let i;
-    let minx;
-    let maxx;
-    let miny;
-    let maxy;
+  centerPolygon(points: Array<{x: number; y: number}>): {x: number; y: number} | undefined {
+    let i: number;
+    let minx: number | undefined;
+    let maxx: number | undefined;
+    let miny: number | undefined;
+    let maxy: number | undefined;
     if (!points || !points.length) {
       return undefined;
     }
@@ -72,22 +70,22 @@ const JS9MathUtils = {
         maxy = points[i].y;
       }
     }
-    return { x: (minx + maxx) / 2.0, y: (miny + maxy) / 2.0 };
+    return { x: (minx! + maxx!) / 2.0, y: (miny! + maxy!) / 2.0 };
   },
 
   // centroid for a polygon (not for self-intersecting polygons)
-  centroidPolygon(points, doaverage) {
-    let i;
-    let factor;
-    let area;
-    let cx;
-    let cy;
+  centroidPolygon(points: Array<{x: number; y: number}>, doaverage: boolean): {x: number; y: number} | undefined {
+    let i: number;
+    let factor = 0;
+    let area = 0;
+    let cx = 0;
+    let cy = 0;
     let parta = 0;
     let partx = 0;
     let party = 0;
     let totx = 0;
     let toty = 0;
-    const pts = [];
+    const pts: Array<{x: number; y: number}> = [];
 
     if (!points || !points.length) {
       return undefined;
@@ -120,6 +118,4 @@ const JS9MathUtils = {
   }
 };
 
-if (typeof globalThis !== "undefined") {
-  globalThis.JS9MathUtils = JS9MathUtils;
-}
+export { JS9MathUtils };

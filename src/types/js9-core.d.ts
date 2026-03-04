@@ -1,6 +1,9 @@
 export {};
 
 declare global {
+    // --- lib/index.ts loader state (internal) ---
+    var __JS9_LOADER_STATE__: Record<string, unknown> | undefined;
+
     interface JS9ShapeEngine {
         init: () => void;
         installDisplayApi?: (JS9: unknown) => void;
@@ -68,4 +71,13 @@ declare global {
         layerName?: string;
         nshape?: number;
     }
+
+    // Phase 5: viewer.ts decomposition installers
+    var JS9InstallDisplay: (JS9: any) => void;
+    var JS9InstallImageCore: (JS9: any) => void;
+    var JS9InstallImageRender: (JS9: any) => void;
+    var JS9InstallImageCoords: (JS9: any) => void;
+    var JS9InstallImageData: (JS9: any) => void;
+    var JS9InstallRegions: (JS9: any) => void;
+    var JS9InstallOverlays: (JS9: any) => void;
 }

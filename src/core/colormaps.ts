@@ -1,9 +1,9 @@
-// @ts-nocheck
 /* JS9 colormap initialization extracted from viewer.js. */
 
 "use strict";
 
-function JS9InstallColormaps(JS9){
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function JS9InstallColormaps(JS9: any){
     // init colormaps
     JS9.initColormaps = function(){
         // sanity check
@@ -71,7 +71,7 @@ function JS9InstallColormaps(JS9){
     	let i, frac, h, s, v, f, p, q, t, ii;
     	let cur = 0;
     	const size = 200;
-    	const a = [];
+    	const a: number[][] = [];
     	for(i=0; i<size; i++, cur++){
     	    // generate in hsv
     	    frac = 1.0 - (i / (size - 1.0));
@@ -136,7 +136,7 @@ function JS9InstallColormaps(JS9){
         JS9.checkNew(new JS9.Colormap("staircase", (() => {
     	let ii, kk;
     	let cur = 0;
-    	const a = [];
+    	const a: number[][] = [];
     	for(ii=1; ii<=5; ii++, cur++){
                 kk = ii/5.0;
     	    a[cur] = [];
@@ -164,6 +164,4 @@ function JS9InstallColormaps(JS9){
     };
 }
 
-if( typeof globalThis !== "undefined" ){
-    globalThis.JS9InstallColormaps = JS9InstallColormaps;
-}
+export { JS9InstallColormaps };

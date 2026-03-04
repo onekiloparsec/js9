@@ -1,7 +1,8 @@
 // @ts-nocheck
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
+import { dhtmlwindow } from './browserCompat';
 
-/*global JS9Prefs, JS9Inline, dhtmlwindow, Jupyter, Plotly, ImageFilters, parent */
+/*global JS9Prefs, JS9Inline, Jupyter, Plotly, ImageFilters, parent */
 
 "use strict";
 

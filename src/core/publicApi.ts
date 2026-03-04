@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* JS9 browser viewer core. Attribution is centralized in README.md. */
+import { sprintf } from './sprintf';
 
 "use strict";
 
@@ -1463,7 +1464,7 @@ JS9.mkPublic("SaveColormap", function(...args){
     };
     arg1 = obj.argv[0];
     arg2 = obj.argv[1];
-    if( {}.hasOwnProperty.call(window, "saveAs") ){
+    if( typeof saveAs === "function" ){
 	// check for json strings in arg1 and/or arg2
 	im = JS9.getImage(obj.display);
 	if( im ){
