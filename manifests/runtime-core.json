@@ -3,6 +3,12 @@
     { "src": "generated/runtime/runtime.js", "dest": "runtime", "rename": "runtime.js" },
     { "src": "generated/runtime/worker.js",  "dest": "runtime", "rename": "worker.js"  },
 
+    { "src": "demo-vue/public/runtime/prefs.js",    "dest": "runtime" },
+    { "src": "demo-vue/public/runtime/prefs.json",  "dest": "runtime" },
+    { "src": "demo-vue/public/runtime/support.css", "dest": "runtime" },
+    { "src": "demo-vue/public/runtime/viewer.css",  "dest": "runtime" },
+    { "src": "demo-vue/public/font/*",              "dest": "runtime/font" },
+
     { "src": "node_modules/@onekiloparsec/fixi-js/dist/fixi.js",        "dest": "runtime" },
     { "src": "node_modules/@onekiloparsec/fixi-js/dist/fixi_core.wasm", "dest": "runtime" }
   ]
