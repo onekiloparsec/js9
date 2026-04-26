@@ -15,7 +15,8 @@ export type {
     JS9PanInfo,
     JS9ImageInfo,
     JS9RegionOptions,
-    JS9DisplayTarget
+    JS9DisplayTarget,
+    JS9DisplayLike
 } from "./types";
 
 // Declare the globalThis shape used internally by the loader.

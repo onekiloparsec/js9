@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>JS9 consumer demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1.5rem; }
+      h1 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+      #controls { margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; }
+      #status { font-size: 0.85rem; color: #555; margin-left: 0.75rem; }
+      .JS9 { width: 512px; height: 512px; }
+    </style>
+  </head>
+  <body>
+    <h1>JS9 consumer demo (<code>@onekiloparsec/js9</code>)</h1>
+    <div id="controls">
+      <button id="load-remote">Load remote sample FITS</button>
+      <input id="file-input" type="file" accept=".fits,.fts,.fz,.gz" />
+      <span id="status">initialising…</span>
+    </div>
+    <div class="JS9" id="JS9"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

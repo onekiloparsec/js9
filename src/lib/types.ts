@@ -39,6 +39,17 @@ export interface LoadJS9RuntimeOptions {
 // JS9 public API surface
 // ---------------------------------------------------------------------------
 
+/**
+ * Minimal shape of a JS9 display object as exposed to library consumers.
+ * The runtime object has many more fields; only the stable subset is typed here.
+ */
+export interface JS9DisplayLike {
+    id?: string;
+    image?: unknown;
+    layers?: Record<string, unknown>;
+    pluginInstances?: Record<string, unknown>;
+}
+
 /** Optional display targeting parameter accepted by most JS9 methods. */
 export type JS9DisplayTarget = string | JS9DisplayLike;
 
