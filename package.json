@@ -1,6 +1,6 @@
 {
-  "name": "js9",
-  "version": "3.9.0",
+  "name": "@onekiloparsec/js9",
+  "version": "4.0.0",
   "description": "astronomical image display everywhere",
   "main": "dist/library/js9.umd.js",
   "module": "dist/library/js9.es.js",
@@ -11,6 +11,16 @@
       "import": "./dist/library/js9.es.js",
       "require": "./dist/library/js9.umd.js"
     }
+  },
+  "files": [
+    "dist/library",
+    "README.md",
+    "LICENSE",
+    "MIGRATION.md"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "build:runtime:ts": "tsc -p tsconfig.runtime.json",
@@ -38,7 +48,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ericmandel/js9.git"
+    "url": "git+https://github.com/onekiloparsec/js9.git"
   },
   "keywords": [
     "astronomy",
@@ -48,13 +58,14 @@
   "author": "Eric Mandel <eric@cfa.harvard.edu> (https://js9.si.edu)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ericmandel/js9/issues"
+    "url": "https://github.com/onekiloparsec/js9/issues"
   },
   "homepage": "https://js9.si.edu",
-  "dependencies": {},
+  "dependencies": {
+    "@onekiloparsec/fixi-js": "^0.3.0"
+  },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
-    "@onekiloparsec/fixi-js": "file:../fixi-js",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
