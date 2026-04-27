@@ -4,7 +4,7 @@
     { "src": "generated/runtime/worker.js",  "dest": "runtime", "rename": "worker.js"  },
 
     { "src": "demo-vue/public/runtime/prefs.js",    "dest": "runtime" },
-    { "src": "demo-vue/public/runtime/prefs.json",  "dest": "runtime" },
+    { "src": "manifests/library-prefs.json",        "dest": "runtime", "rename": "prefs.json" },
     { "src": "demo-vue/public/runtime/support.css", "dest": "runtime" },
     { "src": "demo-vue/public/runtime/viewer.css",  "dest": "runtime" },
     { "src": "demo-vue/public/font/*",              "dest": "runtime/font" },

@@ -1,0 +1,8 @@
+{
+  "globalOpts": {
+    "helperType": "none",
+    "helperPort": 0,
+    "fitsAdapter": "fixi",
+    "fitsCompliance": "compat"
+  }
+}
