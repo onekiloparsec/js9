@@ -785,7 +785,9 @@ JS9.Display.prototype.resize = function(width, height, opts){
 	    }
 	}
     }
-    // change size of shape canvases
+    // change size of shape canvases. The native shape engine exposes width
+    // and height as plain numeric properties on the canvas controller — no
+    // fabric.js methods (setWidth/setHeight/calcOffset) are needed.
     for( key of Object.keys(this.layers) ){
 	layer = this.layers[key];
 	if( layer.dtype === "main" ){
@@ -793,9 +795,14 @@ JS9.Display.prototype.resize = function(width, height, opts){
 	    layer.divjq.css("height", nheight);
 	    layer.canvasjq.attr("width", nwidth);
 	    layer.canvasjq.attr("height", nheight);
-	    layer.canvas.setWidth(nwidth);
-	    layer.canvas.setHeight(nheight);
-	    layer.canvas.calcOffset();
+	    if( layer.canvas ){
+		layer.canvas.width = nwidth;
+		layer.canvas.height = nheight;
+		if( layer.canvas.element ){
+		    layer.canvas.element.width = nwidth;
+		    layer.canvas.element.height = nheight;
+		}
+	    }
 	}
     }
     // change position of shapes on currently displayed layers
