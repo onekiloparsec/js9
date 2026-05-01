@@ -73,6 +73,30 @@ Legacy non-module runtime assets are stored under:
 
     runtime
 
+### Two demos, two purposes
+
+There are two Vue demos in this repo. They look similar but are wired
+differently on purpose:
+
+| Path                | Source of `JS9` runtime                          | What it verifies                                     |
+| ------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| `demo-vue/`         | Local source tree (manifests + `generated/`)     | Inner-loop dev demo — see your edits live            |
+| `examples/consumer/`| The published `@onekiloparsec/js9` from npm      | Smoke-tests the npm tarball as a downstream consumer |
+
+Run them with:
+
+    npm run dev:demo            # demo-vue, dev tree
+    cd examples/consumer && npm install && npm run dev   # consumer demo, registry tarball
+
+If you only edit code under `src/` and want to see the result, use
+`demo-vue`. If you just published a new version and want to confirm the
+package installs and works for a real consumer, use `examples/consumer`.
+
+The runtime static assets (`prefs.js`, `support.css`, `viewer.css`,
+context-menu fonts) live under `demo-vue/public/` and are pulled into the
+published tarball by `manifests/runtime-core.json`. Don't move them
+without updating that manifest.
+
 ## FITS/XISF Extraction Boundary (`fixi-js`)
 
 This fork now supports an extracted FITS adapter layer in a sibling repository:

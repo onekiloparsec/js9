@@ -5,21 +5,56 @@
     <title>JS9 consumer demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
-      body { font-family: system-ui, sans-serif; margin: 1.5rem; }
-      h1 { font-size: 1.2rem; margin-bottom: 0.5rem; }
-      #controls { margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center; }
-      #status { font-size: 0.85rem; color: #555; margin-left: 0.75rem; }
-      .JS9 { width: 512px; height: 512px; }
+      :root {
+        color-scheme: dark;
+        --bg: #0d1117;
+        --panel: #161b22;
+        --panel-2: #1f2630;
+        --border: #2a313c;
+        --text: #d6deeb;
+        --muted: #8b97a8;
+        --accent: #58a6ff;
+      }
+      html, body, #app { height: 100%; margin: 0; }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      button {
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 4px 10px;
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) { border-color: var(--accent); }
+      button:disabled { opacity: 0.4; cursor: default; }
+      select {
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 3px 6px;
+        font: inherit;
+        font-size: 0.85rem;
+      }
+      input[type="file"]::file-selector-button {
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 3px 8px;
+        margin-right: 6px;
+        cursor: pointer;
+      }
     </style>
   </head>
   <body>
-    <h1>JS9 consumer demo (<code>@onekiloparsec/js9</code>)</h1>
-    <div id="controls">
-      <button id="load-remote">Load remote sample FITS</button>
-      <input id="file-input" type="file" accept=".fits,.fts,.fz,.gz" />
-      <span id="status">initialising…</span>
-    </div>
-    <div class="JS9" id="JS9"></div>
-    <script type="module" src="/src/main.js"></script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

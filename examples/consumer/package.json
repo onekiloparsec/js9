@@ -2,7 +2,7 @@
   "name": "js9-consumer-demo",
   "version": "0.0.0",
   "private": true,
-  "description": "Standalone consumer demo of @onekiloparsec/js9 — install from GH Packages, run vite, view a FITS file in the browser.",
+  "description": "Standalone Vue consumer demo of @onekiloparsec/js9 — view a FITS file in the browser with a fit-to-parent display, controls toolbar, and a cursor pixel-3D probe.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@onekiloparsec/js9": "^4.0.4"
+    "@onekiloparsec/js9": "^4.0.4",
+    "vue": "^3.5.21"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.3.1",
-    "vite-plugin-static-copy": "^3.2.0"
+    "vite-plugin-static-copy": "^4.1.0"
   }
 }
