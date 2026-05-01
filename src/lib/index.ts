@@ -213,6 +213,39 @@ function finalizeJS9Runtime(baseUrl: string, runtimePath: string): JS9Namespace 
     return js9;
 }
 
+/**
+ * Wait until the FITS adapter (fixi) finishes initialising. `js9.init()` kicks
+ * off an *async* fixi.js + WASM load chain that can still be in flight when
+ * this function returns. Calling `JS9.Load(url)` while `JS9.fits` is null
+ * throws "no FITS module available to process FITS file" — the symptom
+ * consumers hit when their viewer mounts on a route that immediately loads
+ * a frame.
+ */
+async function waitForFITSAdapter(js9: JS9Namespace, timeoutMs = 15000): Promise<void> {
+    const fits = (js9 as unknown as { fits?: { ready?: boolean } }).fits;
+    if (fits?.ready) return;
+    const start = Date.now();
+    return new Promise<void>((resolve, reject) => {
+        const tick = () => {
+            const f = (js9 as unknown as { fits?: { ready?: boolean } }).fits;
+            if (f?.ready) {
+                resolve();
+                return;
+            }
+            if (Date.now() - start > timeoutMs) {
+                reject(new Error(
+                    `JS9 FITS adapter did not become ready within ${timeoutMs}ms ` +
+                    `(check that ${js9.globalOpts?.["fixiURL"] || "fixi.js"} ` +
+                    `and ${js9.globalOpts?.["fixiWasmURL"] || "fixi_core.wasm"} are reachable)`
+                ));
+                return;
+            }
+            setTimeout(tick, 30);
+        };
+        tick();
+    });
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -243,13 +276,17 @@ export async function loadJS9Runtime(options: LoadJS9RuntimeOptions = {}): Promi
         setLoaderState("using-existing-js9", {
             inited: Boolean(globalThis.JS9.inited)
         });
-        return finalizeJS9Runtime(baseUrl, runtimePath);
+        const js9 = finalizeJS9Runtime(baseUrl, runtimePath);
+        await waitForFITSAdapter(js9);
+        return js9;
     }
 
     if (loadPromise) {
         setLoaderState("awaiting-existing-load-promise");
         await loadPromise;
-        return finalizeJS9Runtime(baseUrl, runtimePath);
+        const js9 = finalizeJS9Runtime(baseUrl, runtimePath);
+        await waitForFITSAdapter(js9);
+        return js9;
     }
 
     const runtimeStyles = styles.map((href) => resolveAssetPath(runtimePath, href));
@@ -271,5 +308,7 @@ export async function loadJS9Runtime(options: LoadJS9RuntimeOptions = {}): Promi
 
     await loadPromise;
     loadPromise = null;
-    return finalizeJS9Runtime(baseUrl, runtimePath);
+    const js9 = finalizeJS9Runtime(baseUrl, runtimePath);
+    await waitForFITSAdapter(js9);
+    return js9;
 }
