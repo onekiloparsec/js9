@@ -158,8 +158,14 @@ export function createDisplayController (
 
   function setScale (scale?: string) {
     if (!scale) return;
-    // Same reasoning as setColormap: extra undefined args land in the
-    // (scale, scalemin, scalemax) branch and try to parseFloat them.
+    // zscale / zmax / dataminmax are *clipping* modes in JS9: they only
+    // update params.scaleclipping + scalemin/max and leave params.scale
+    // (the stretch function) untouched. So going `log` → `zscale` would
+    // keep the log stretch and look identical — the user expects "back to
+    // z-scale" to mean "auto-clip + linear". Force linear first.
+    if (CLIP_ONLY_SCALES.has(scale)) {
+      (js9.SetScale as any)("linear", target);
+    }
     (js9.SetScale as any)(scale, target);
   }
 
