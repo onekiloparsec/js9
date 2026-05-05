@@ -1,6 +1,6 @@
 {
   "name": "@onekiloparsec/js9",
-  "version": "4.1.2",
+  "version": "4.2.0",
   "description": "astronomical image display everywhere",
   "main": "dist/library/js9.umd.js",
   "module": "dist/library/js9.es.js",
@@ -62,7 +62,7 @@
   },
   "homepage": "https://js9.si.edu",
   "dependencies": {
-    "@onekiloparsec/fixi-js": "^0.3.0"
+    "@onekiloparsec/fixi-js": "^0.4.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
