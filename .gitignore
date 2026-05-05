@@ -37,3 +37,6 @@ dist/
 coverage/
 generated/
 .generated/
+
+# Demo assets (large local-only fixtures)
+demo-vue/public/sample.xisf

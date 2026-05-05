@@ -314,7 +314,7 @@ JS9.globalOpts = {
     syncWCS: true,               // default value for using WCS to sync
     hiddenPluginDivs: [],        // which static plugin divs start hidden
     separate: {layout: "auto", leftMargin: 10, topMargin: 10}, // separate a display
-    imageTemplates: ".fits,.fts,.png,.jpg,.jpeg,.fz,.ftz,.gz", // templates for local images
+    imageTemplates: ".fits,.fts,.xisf,.png,.jpg,.jpeg,.fz,.ftz,.gz", // templates for local images
     wcsUnits: {FK4:"sexagesimal", FK5:"sexagesimal", ICRS:"sexagesimal",
 	       galactic:"degrees", ecliptic:"degrees", linear:"degrees",
 	       physical:"pixels", image:"pixels"}, // def units for wcs sys
@@ -324,7 +324,7 @@ JS9.globalOpts = {
     sessionTemplates: ".ses,.js9ses",// templates for local session file input
     colormapTemplates: ".cmap",      // templates for local colormap file input
     catalogTemplates: ".cat,.tab",   // templates for local catalog file input
-    localTemplates: ".fits,.fts",    // templates for local file access
+    localTemplates: ".fits,.fts,.xisf",    // templates for local file access
     controlsMatchRegion: false,      // true, false, "corner" or "border"
     internalColorPicker: true,       // use HTML5 color picker, if available?
     newWindowWidth:  530,	     // width of LoadWindow("new")

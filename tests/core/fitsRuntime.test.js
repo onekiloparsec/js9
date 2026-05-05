@@ -93,4 +93,61 @@ describe("JS9InstallFITSRuntime", () => {
       /unknown fits library/i
     );
   });
+
+  it("accepts an adapter that emits XISF-derived HDUs", () => {
+    globalThis.window = {};
+
+    const JS9 = makeJS9();
+    installCoreBasicUtils(JS9);
+    globalThis.JS9InstallFITSRuntime(JS9);
+
+    let captured = null;
+    const xisfAdapter = {
+      name: "fixi",
+      handleFITSFile(_file, _opts, handler) {
+        const hdu = {
+          file: "sample.xisf",
+          fits: { vfile: "sample.xisf", file: "sample.xisf" },
+          bitpix: -32,
+          naxis: 2,
+          axis: [0, 4, 4],
+          image: new Float32Array(16),
+          data: new Float32Array(16),
+          dmin: 0,
+          dmax: 1,
+          head: {
+            SIMPLE: true,
+            BITPIX: -32,
+            NAXIS: 2,
+            NAXIS1: 4,
+            NAXIS2: 4,
+            FIXI_FORMAT: "xisf"
+          },
+          card: [],
+          ncard: 0,
+          imtab: "image",
+          bin: 1,
+          x1: 1,
+          y1: 1
+        };
+        captured = hdu;
+        handler(hdu);
+      },
+      getFITSImage() {},
+      cleanupFITSFile() {},
+      maxFITSMemory() {}
+    };
+
+    JS9.registerFITSAdapter("fixi", xisfAdapter);
+    JS9.useFITSAdapter("fixi");
+
+    JS9.fits.handleFITSFile({}, {}, (hdu) => {
+      expect(hdu.bitpix).toBe(-32);
+      expect(hdu.naxis).toBe(2);
+      expect(hdu.head.FIXI_FORMAT).toBe("xisf");
+      expect(hdu.image).toBeInstanceOf(Float32Array);
+    });
+
+    expect(captured).not.toBeNull();
+  });
 });

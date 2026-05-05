@@ -113,6 +113,10 @@ JS9 now uses a fixi-first FITS runtime path:
 
 - `fixi` Rust/WASM initializes FITS support directly in JS runtime
 - legacy `cfitsio` runtime paths are not used by default startup
+- the same Rust/WASM core also parses XISF (PixInsight) files: the
+  adapter sniffs the input magic bytes and dispatches FITS / XISF
+  internally, so consumers call `JS9.Load("foo.xisf")` the same way
+  as for FITS
 
 Default behavior with `Fixi` enabled:
 
