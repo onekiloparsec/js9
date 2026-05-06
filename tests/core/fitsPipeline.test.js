@@ -14,6 +14,13 @@ const require = createRequire(import.meta.url);
 const Fixi = require("@onekiloparsec/fixi-js");
 const fixiDistDir = path.dirname(require.resolve("@onekiloparsec/fixi-js/dist/fixi.js"));
 const fixturesDir = path.join(fixiDistDir, "..", "test", "data", "fits");
+// fixi-js is published with only `dist` + README in its files glob; the test
+// fixtures live in the source tree and are only present when fixi-js is
+// installed via a workspace / file: link. Skip fixture-backed tests when
+// the file isn't reachable so the suite still runs against a registry-
+// installed fixi-js.
+const hasFixtures = fs.existsSync(path.join(fixturesDir, "U10320.fits"));
+const itWithFixtures = hasFixtures ? it : it.skip;
 
 // --- Minimal synthetic FITS builder ---
 // Ported from fixi-js/test/helpers/fits-builders.js so tests are self-contained.
@@ -103,7 +110,7 @@ describe("Fixi.inspectFITS – header parsing", () => {
     expect(img.axes[1]).toBe(4);   // NAXIS2
   });
 
-  it("parses a real FITS file (U10320.fits — a 1D spectrum)", async () => {
+  itWithFixtures("parses a real FITS file (U10320.fits — a 1D spectrum)", async () => {
     const bytes = fs.readFileSync(path.join(fixturesDir, "U10320.fits"));
     const summary = await Fixi.inspectFITS(bytes);
 
@@ -177,7 +184,7 @@ describe("Fixi.createRustWasmAdapter – handleFITSFile", () => {
     expect(hdu.dmax).toBeGreaterThan(hdu.dmin);
   });
 
-  it("loads a real FITS file (U10320.fits) via the adapter", async () => {
+  itWithFixtures("loads a real FITS file (U10320.fits) via the adapter", async () => {
     const bytes = fs.readFileSync(path.join(fixturesDir, "U10320.fits"));
     const adapter = makeAdapter();
 
