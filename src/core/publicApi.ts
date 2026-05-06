@@ -108,6 +108,7 @@ JS9.mkPublic("SaveJPEG", "saveJPEG");
 JS9.mkPublic("SaveFITS", "saveFITS");
 JS9.mkPublic("UploadFITSFile", "uploadFITSFile");
 JS9.mkPublic("CountsInRegions", "countsInRegions");
+JS9.mkPublic("ComputeStarMetrics", "computeStarMetrics");
 JS9.mkPublic("RadialProfile", "radialProfile");
 JS9.mkPublic("Plot3D", "plot3d");
 JS9.mkPublic("RunAnalysis", "runAnalysis");

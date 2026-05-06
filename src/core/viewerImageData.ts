@@ -868,6 +868,38 @@ JS9.Image.prototype.zscale = function(setvals){
     return this;
 };
 
+// ---------------------------------------------------------------------------
+// Star metrics: HFR / FWHM / star count via the active adapter (Rust/WASM
+// in fixi-js). Returns a plain object describing detected stars + summary
+// statistics. Call as `image.computeStarMetrics(opts)`.
+// ---------------------------------------------------------------------------
+JS9.Image.prototype.computeStarMetrics = function(opts){
+    let result;
+    if( !this.raw || !this.raw.data ){
+	return null;
+    }
+    if( !JS9.fits || typeof JS9.fits.computeStarMetrics !== "function" ){
+	JS9.error("the active FITS adapter does not implement computeStarMetrics");
+	return null;
+    }
+    try{
+	result = JS9.fits.computeStarMetrics(
+	    this.raw.data,
+	    this.raw.width,
+	    this.raw.height,
+	    opts || {}
+	);
+    }
+    catch(e){
+	JS9.error("computeStarMetrics() failed", e);
+	return null;
+    }
+    if( JS9.globalOpts && JS9.globalOpts.extendedPlugins ){
+	this.xeqPlugins("image", "onstarmetrics", result);
+    }
+    return result;
+};
+
 // background-subtracted counts in regions
 // eslint-disable-next-line no-unused-vars
 JS9.Image.prototype.countsInRegions = function(...args){

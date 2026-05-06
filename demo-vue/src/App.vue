@@ -5,6 +5,8 @@ import { loadJS9Runtime } from "../../src/lib/index.ts";
 const status = ref("Loading JS9 runtime...");
 const js9Ref = ref(null);
 const isReady = ref(false);
+const metrics = ref(null);
+const computing = ref(false);
 
 onMounted(async () => {
   try {
@@ -51,6 +53,7 @@ function loadSample(url, label, opts = {}) {
   const JS9 = js9Ref.value;
   if (!JS9) return;
   status.value = `Loading ${label}...`;
+  metrics.value = null;
   try {
     JS9.Load(url, {
       display: "js9-display",
@@ -71,6 +74,39 @@ function loadSample(url, label, opts = {}) {
     status.value = `Failed to load ${label}: ${err.message}`;
   }
 }
+
+function computeStarMetrics() {
+  const JS9 = js9Ref.value;
+  if (!JS9) return;
+  const im = JS9.GetImage && JS9.GetImage({ display: "js9-display" });
+  if (!im) {
+    status.value = "No image loaded yet — load FITS or XISF first";
+    return;
+  }
+  computing.value = true;
+  status.value = "Detecting stars...";
+  try {
+    // Higher sigma threshold + radius for typical sky frames; bright master
+    // darks need a higher threshold to skip cosmetic noise.
+    const result = im.computeStarMetrics({
+      sigmaThreshold: 8,
+      minSize: 4,
+      maxRadius: 8,
+      maxStarsReturned: 50
+    });
+    metrics.value = result;
+    status.value = `Detected ${result?.count ?? 0} star(s)`;
+  } catch (err) {
+    status.value = `computeStarMetrics failed: ${err.message}`;
+  } finally {
+    computing.value = false;
+  }
+}
+
+function fmt(v, digits = 2) {
+  if (v == null || !Number.isFinite(v)) return "—";
+  return Number(v).toFixed(digits);
+}
 </script>
 
 <template>
@@ -87,6 +123,29 @@ function loadSample(url, label, opts = {}) {
       >
         Load XISF sample
       </button>
+      <button :disabled="!isReady || computing" @click="computeStarMetrics">
+        Compute star metrics
+      </button>
+    </div>
+    <div v-if="metrics" class="metrics">
+      <div><strong>Stars:</strong> {{ metrics.count }}</div>
+      <div>
+        <strong>HFR</strong>
+        median {{ fmt(metrics.hfr?.median) }} px,
+        mean {{ fmt(metrics.hfr?.mean) }} px,
+        σ {{ fmt(metrics.hfr?.stddev) }}
+      </div>
+      <div>
+        <strong>FWHM</strong>
+        median {{ fmt(metrics.fwhm?.median) }} px,
+        mean {{ fmt(metrics.fwhm?.mean) }} px,
+        σ {{ fmt(metrics.fwhm?.stddev) }}
+      </div>
+      <div>
+        <strong>Background</strong> {{ fmt(metrics.background, 4) }},
+        <strong>noise σ</strong> {{ fmt(metrics.noise, 4) }},
+        <strong>threshold</strong> {{ fmt(metrics.threshold, 4) }}
+      </div>
     </div>
     <div id="js9-host">
       <div
@@ -153,6 +212,18 @@ h1 {
 .actions button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.metrics {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #c7ced9;
+  border-radius: 4px;
+  background: #fff;
+  font-family: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, monospace;
+  font-size: 0.85rem;
+  width: fit-content;
 }
 
 #js9-host {
