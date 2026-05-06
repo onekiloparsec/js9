@@ -53,6 +53,71 @@ export interface JS9DisplayLike {
 /** Optional display targeting parameter accepted by most JS9 methods. */
 export type JS9DisplayTarget = string | JS9DisplayLike;
 
+/**
+ * Trailing call argument used by every public JS9 method to pin the call to
+ * a specific display. The runtime (`JS9.parsePublicArgs`) only recognises it
+ * when it is the LAST positional argument AND is an object whose only own
+ * property is `display`. Passing the display id as a bare string in the last
+ * position is silently ignored — it is treated as an extra method argument
+ * by the underlying image method.
+ *
+ * @example
+ *   JS9.SetScale("log");                                // current display
+ *   JS9.SetScale("log", { display: "myJS9" });          // pinned
+ *   JS9.SetScale("user", 0.1, 0.5, { display: "myJS9" });
+ */
+export interface JS9PublicCallTarget {
+    display: JS9DisplayTarget;
+}
+
+/**
+ * Names accepted by `setScale` / `SetScale`.
+ *
+ * - The first eight (`linear`–`sinh`) are the registered scale algorithms
+ *   from `JS9.scales`.
+ * - The last four (`dataminmax`, `zscale`, `zmax`, `user`) are scale-clipping
+ *   modes that update `params.scaleclipping` plus `scalemin`/`scalemax`
+ *   without changing the algorithm.
+ *
+ * The `(string & {})` tail keeps the union assignable from a plain `string`
+ * for forward compatibility while still suggesting the well-known names in
+ * editor autocomplete.
+ */
+export type JS9ScaleName =
+    | "linear"
+    | "log"
+    | "histeq"
+    | "power"
+    | "sqrt"
+    | "squared"
+    | "asinh"
+    | "sinh"
+    | "dataminmax"
+    | "zscale"
+    | "zmax"
+    | "user"
+    | (string & {});
+
+/**
+ * `JS9.SetScale` is variadic. The runtime overloads are:
+ *
+ * - `SetScale(scale)` — set the algorithm or clipping mode by name
+ * - `SetScale(low, high)` — set `scalemin`/`scalemax` with `scaleclipping="user"`
+ *   (no algorithm change)
+ * - `SetScale(scale, low, high)` — set algorithm + min + max
+ *
+ * Any of these accepts a trailing `{ display }` object to target a specific
+ * display.
+ */
+export interface JS9SetScale {
+    (scale: JS9ScaleName): void;
+    (scale: JS9ScaleName, target: JS9PublicCallTarget): void;
+    (low: number, high: number): void;
+    (low: number, high: number, target: JS9PublicCallTarget): void;
+    (scale: JS9ScaleName, low: number, high: number): void;
+    (scale: JS9ScaleName, low: number, high: number, target: JS9PublicCallTarget): void;
+}
+
 export interface JS9ColormapInfo {
     colormap: string;
     contrast: number;
@@ -60,9 +125,11 @@ export interface JS9ColormapInfo {
 }
 
 export interface JS9ScaleInfo {
-    scale: string;
+    scale: JS9ScaleName;
     scalemin: number;
     scalemax: number;
+    /** Mirrors `params.scaleclipping`: which sub-mode produced scalemin/scalemax. */
+    scaleclipping?: "dataminmax" | "zscale" | "zmax" | "user";
 }
 
 export interface JS9PanInfo {
@@ -116,34 +183,42 @@ export interface JS9Namespace {
     init(): void;
 
     // --- Image loading ---
-    Load(url: string, opts?: JS9LoadOptions, display?: JS9DisplayTarget): void;
-    LoadFITSFile(file: File, opts?: JS9LoadOptions, display?: JS9DisplayTarget): void;
-    CloseImage(opts?: Record<string, unknown>, display?: JS9DisplayTarget): void;
+    // Load also accepts `opts.display` as an alternative to the trailing
+    // `{ display }` form; both work because Load merges them internally.
+    Load(url: string, opts?: JS9LoadOptions, target?: JS9PublicCallTarget): void;
+    LoadFITSFile(file: File, opts?: JS9LoadOptions, target?: JS9PublicCallTarget): void;
+    CloseImage(opts?: Record<string, unknown>, target?: JS9PublicCallTarget): void;
 
     // --- Image info ---
-    GetImageData(fits?: boolean, display?: JS9DisplayTarget): JS9ImageInfo | null;
+    GetImageData(fits?: boolean, target?: JS9PublicCallTarget): JS9ImageInfo | null;
 
     // --- Displays ---
     GetDisplays(): JS9DisplayLike[];
 
     // --- Colormap ---
-    SetColormap(name: string, contrast?: number, bias?: number, display?: JS9DisplayTarget): void;
-    GetColormap(display?: JS9DisplayTarget): JS9ColormapInfo;
+    SetColormap(name: string, target?: JS9PublicCallTarget): void;
+    SetColormap(name: string, contrast: number, bias: number, target?: JS9PublicCallTarget): void;
+    GetColormap(target?: JS9PublicCallTarget): JS9ColormapInfo;
 
     // --- Scale ---
-    SetScale(scale: string, low?: number, high?: number, display?: JS9DisplayTarget): void;
-    GetScale(display?: JS9DisplayTarget): JS9ScaleInfo;
+    SetScale: JS9SetScale;
+    GetScale(target?: JS9PublicCallTarget): JS9ScaleInfo;
 
     // --- Zoom / Pan ---
-    SetZoom(zoom: number | string, display?: JS9DisplayTarget): void;
-    GetZoom(display?: JS9DisplayTarget): number;
-    SetPan(x?: number, y?: number, display?: JS9DisplayTarget): void;
-    GetPan(display?: JS9DisplayTarget): JS9PanInfo;
+    SetZoom(zoom: number | string, target?: JS9PublicCallTarget): void;
+    GetZoom(target?: JS9PublicCallTarget): number;
+    /** Pan to image center. */
+    SetPan(target?: JS9PublicCallTarget): void;
+    /** Pan using a `"x y"` / `"mouse"` string or a JSON-encoded position. */
+    SetPan(spec: string, target?: JS9PublicCallTarget): void;
+    /** Pan to explicit image coordinates. */
+    SetPan(x: number, y: number, target?: JS9PublicCallTarget): void;
+    GetPan(target?: JS9PublicCallTarget): JS9PanInfo;
 
     // --- Regions ---
-    AddRegions(regions: unknown, opts?: JS9RegionOptions, display?: JS9DisplayTarget): unknown;
-    GetRegions(region?: unknown, display?: JS9DisplayTarget): unknown[];
-    RemoveRegions(region?: unknown, display?: JS9DisplayTarget): void;
+    AddRegions(regions: unknown, opts?: JS9RegionOptions, target?: JS9PublicCallTarget): unknown;
+    GetRegions(region?: unknown, target?: JS9PublicCallTarget): unknown[];
+    RemoveRegions(region?: unknown, target?: JS9PublicCallTarget): void;
 
     // Escape hatch — the full JS9 API is much larger; anything not listed
     // above is still accessible at runtime, just not yet typed.
