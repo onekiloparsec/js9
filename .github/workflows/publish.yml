@@ -1,0 +1,44 @@
+name: Publish JS9
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://npm.pkg.github.com
+          scope: "@onekiloparsec"
+
+      - name: Install Dependencies
+        # @onekiloparsec/fixi-js is restricted on GitHub Packages, so the
+        # install step needs the same auth token as the publish step.
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Library
+        # Only the published `files` glob (dist/library) is needed to
+        # publish; build:lib runs prebuild (runtime ts + runtime bundle)
+        # and produces UMD, ESM, and .d.ts artifacts under dist/library.
+        run: npm run build:lib
+
+      - name: Publish Package
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
