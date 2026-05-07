@@ -3,6 +3,7 @@
     { "src": "generated/runtime/plugins/**/*", "dest": "plugins" },
     { "src": "src/analysis-plugins/**/*", "dest": "analysis-plugins" },
     { "src": "src/analysis-wrappers/**/*", "dest": "analysis-wrappers" },
-    { "src": "src/params/**/*", "dest": "params" }
+    { "src": "src/params/**/*", "dest": "params" },
+    { "src": "node_modules/@onekiloparsec/js9-plugin-simbad/dist/plugin.js", "dest": "plugins/external", "rename": "simbad.js" }
   ]
 }

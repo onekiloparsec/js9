@@ -17,7 +17,8 @@ onMounted(async () => {
         "plugins/core/menubar.js",
         "plugins/core/toolbar.js",
         "plugins/core/colorbar.js",
-        "plugins/core/statusbar.js"
+        "plugins/core/statusbar.js",
+        "plugins/external/simbad.js"
       ],
       styles: [
         "support.css",
@@ -178,6 +179,12 @@ function fmt(v, digits = 2) {
       <div
         id="js9-displayStatusbar"
         class="JS9Statusbar"
+        data-js9id="js9-display"
+        data-width="900"
+      ></div>
+      <div
+        id="js9-displaySimbad"
+        class="JS9Simbad"
         data-js9id="js9-display"
         data-width="900"
       ></div>
