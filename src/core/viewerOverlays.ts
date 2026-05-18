@@ -1965,14 +1965,38 @@ JS9.loadScript = function(url, func, error){
 
 // fetch a file URL (as a blob) and process it
 // (as of 2/2015: can't use JS9.ajax to retrieve a blob: use low-level xhr)
+//
+// Error handling contract:
+//   - When `opts.onerror` is provided, all fetch failures (404, network
+//     error, timeout, sync XHR send failure, sanity-check failure) invoke
+//     it with the message string. JS9.error() is NOT called, so the caller
+//     can drive its own error UI without JS9 throwing into the XHR stack
+//     (which would otherwise surface as an unhandled exception and leave
+//     any await-style consumer's Promise unresolved).
+//   - When `opts.onerror` is not provided, behavior is unchanged: errors
+//     route through JS9.error() (alert + throw, depending on globalOpts).
+//   - In both cases, JS9.fetchURL.status is set to "error" so getStatus("load")
+//     reflects the failure.
 JS9.fetchURL = function(name, url, opts, handler){
     let nurl;
     const xhr = new XMLHttpRequest();
     // opts is optional
     opts = opts || {};
+    // Route an error through opts.onerror when provided; otherwise fall
+    // back to JS9.error() (which alerts and/or throws per globalOpts).
+    const reportError = (msg) => {
+	JS9.fetchURL.status = "error";
+	if( typeof opts.onerror === "function" ){
+	    try{ opts.onerror(msg); }
+	    catch(e){ JS9.error("in fetchURL onerror callback", e, false); }
+	    return;
+	}
+	JS9.error(msg);
+    };
     // sanity check
     if( !name && !url ){
-	JS9.error("invalid url specification for fetchURL");
+	reportError("invalid url specification for fetchURL");
+	return;
     }
     // either url or name can be blank
     if( !url ){
@@ -2039,24 +2063,31 @@ JS9.fetchURL = function(name, url, opts, handler){
 		    }
 		}
 	    } else if( xhr.status === 404 ){
-		JS9.error(`could not find ${url}`);
+		reportError(`could not find ${url}`);
 	    } else {
-		JS9.error(`can't load: ${url} ${xhr.statusText} ${xhr.status}`);
+		reportError(`can't load: ${url} ${xhr.statusText} ${xhr.status}`);
 	    }
 	}
     };
     xhr.onerror = () => {
-	JS9.error(`cannot load: ${url} ... please check the url/pathname`);
+	reportError(`cannot load: ${url} ... please check the url/pathname`);
     };
     xhr.ontimeout = () => {
-	JS9.error(`timeout awaiting response from server: ${url}`);
+	reportError(`timeout awaiting response from server: ${url}`);
     };
     // hack: set fetch status for JS9.error() to sense and pass on
     // this will be picked up by getStatus("load")
     JS9.fetchURL.status = "processing";
     // fetch the data!
     try{ xhr.send(); }
-    catch(e){ JS9.error(`request to load ${url} failed`, e); }
+    catch(e){
+	const detail = e instanceof Error ? `: ${e.message}` : "";
+	if( typeof opts.onerror === "function" ){
+	    reportError(`request to load ${url} failed${detail}`);
+	} else {
+	    JS9.error(`request to load ${url} failed`, e);
+	}
+    }
 };
 
 // JS9 wrapper around saveAs:

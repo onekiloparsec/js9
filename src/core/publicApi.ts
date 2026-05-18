@@ -423,9 +423,27 @@ JS9.mkPublic("Load", function(...args){
     const obj = JS9.parsePublicArgs(args);
     file = obj.argv[0];
     opts = obj.argv[1];
+    // Route a synchronous failure through opts.onerror when provided so
+    // async callers can settle their Promise; fall back to JS9.error()
+    // otherwise (alert + throw per globalOpts).
+    const reportError = (msg, originalError) => {
+	const onerror = (opts && typeof opts === "object") ? opts.onerror : null;
+	if( typeof onerror === "function" ){
+	    JS9.fetchURL.status = "error";
+	    try{ onerror(originalError && originalError.message ? `${msg}: ${originalError.message}` : msg); }
+	    catch(e){ JS9.error("in Load onerror callback", e, false); }
+	    return;
+	}
+	if( originalError ){
+	    JS9.error(msg, originalError);
+	} else {
+	    JS9.error(msg);
+	}
+    };
     // sanity check
     if( !file ){
-	JS9.error("JS9.Load: no file specified for image load");
+	reportError("JS9.Load: no file specified for image load");
+	return;
     }
     // check for display
     if( obj.display ){
@@ -529,11 +547,11 @@ JS9.mkPublic("Load", function(...args){
 		}
 	    }
 	    try{ JS9.handleFITSFile(file, topts, JS9.NewFitsImage); }
-	    catch(e){ JS9.error("can't process FITS file", e); }
+	    catch(e){ reportError("can't process FITS file", e); }
 	    break;
 	case "img":
 	    try{ JS9.handleImageFile(file, opts, JS9.Load); }
-	    catch(e){ JS9.error("can't process IMG file", e); }
+	    catch(e){ reportError("can't process IMG file", e); }
 	    break;
 	}
 	return;
@@ -545,7 +563,8 @@ JS9.mkPublic("Load", function(...args){
     }
     // it's gotta be a string: in-memory FITS, url, or filename
     if( typeof file !== "string" ){
-	JS9.error(`unknown file type for Load: ${typeof file}`);
+	reportError(`unknown file type for Load: ${typeof file}`);
+	return;
     }
     // convert in-memory base64-encoded FITS to a binary string
     if( file.slice(0,12) === "U0lNUExFICA9" ){
@@ -564,7 +583,7 @@ JS9.mkPublic("Load", function(...args){
 	blob.name = opts.file;
 	topts = JS9.extend(true, {}, JS9.fits.options, opts);
 	try{ JS9.handleFITSFile(blob, topts, JS9.NewFitsImage); }
-	catch(e){ JS9.error("can't process FITS file", e); }
+	catch(e){ reportError("can't process FITS file", e); }
 	return;
     }
     // do we refresh or redisplay?
@@ -633,7 +652,7 @@ JS9.mkPublic("Load", function(...args){
 	// give spinner a chance to start up
 	window.setTimeout(() => {
 	    try{ JS9.handleFITSFile(file, topts, JS9.NewFitsImage); }
-	    catch(e){ JS9.error("can't process FITS file", e); }
+	    catch(e){ reportError("can't process FITS file", e); }
 	}, 0);
     } else {
 	// fetch file
