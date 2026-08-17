@@ -1,6 +1,7 @@
 {
   "copy": [
-    { "src": "generated/runtime/plugins/**/*", "dest": "plugins" },
+    { "//": "One level, not **/*: the recursive glob matches the core/ and imexam/ directories AND the files inside them, so every plugin was copied twice, once nested and once flattened into plugins/. A single * copies each top-level entry, directories included, preserving the layout the loader asks for.",
+      "src": "generated/runtime/plugins/*", "dest": "plugins" },
     { "src": "src/analysis-plugins/**/*", "dest": "analysis-plugins" },
     { "src": "src/analysis-wrappers/**/*", "dest": "analysis-wrappers" },
     { "src": "src/params/**/*", "dest": "params" },
