@@ -216,8 +216,10 @@ JS9.MouseTouch.Actions["change contrast/bias"].stop = function(im, ipos, evt){
 
 // zoom the image
 JS9.MouseTouch.Actions["wheel zoom"] = function(im, evt){
-    let ozoom, nzoom, maxzoom, key;
+    let ozoom, nzoom, maxzoom, key, dpos, ipos, npos, pan, anchor;
     let floor = JS9.globalOpts.panzoomRefreshLimit;
+    // image pixels of slop before a wheel gesture is considered a new one
+    const ANCHORSLOP = 2;
     let got = 0;
     const oevt = JS9.eventNative(evt) || {};
     const delta = (oevt.deltaY || 0) * Math.sign(JS9.DIRZOOM);
@@ -271,8 +273,38 @@ JS9.MouseTouch.Actions["wheel zoom"] = function(im, evt){
 	    delete im.tmp.panzoomRefresh;
 	}, JS9.TIMEOUT);
     }
+    // note the image pixel under the mouse, so we can put it back there.
+    // mkSection snaps the section to whole image pixels, so each tick lands
+    // up to half a pixel off; hold on to the pixel we anchored to at the
+    // start of the gesture and re-aim at it every tick, otherwise those
+    // half pixels accumulate and the image creeps out from under the mouse.
+    if( JS9.globalOpts.mousetouchZoomToCursor ){
+	dpos = JS9.eventToDisplayPos(evt, im.posOffset);
+	ipos = im.displayToImagePos(dpos);
+	anchor = im.tmp.wheelAnchor;
+	// start a new gesture when the mouse has moved, or when the image
+	// moved under it since last time (a pan, a zoom from elsewhere)
+	if( !anchor                                       ||
+	    Math.abs(anchor.dpos.x - dpos.x) > ANCHORSLOP ||
+	    Math.abs(anchor.dpos.y - dpos.y) > ANCHORSLOP ||
+	    Math.abs(anchor.ipos.x - ipos.x) > ANCHORSLOP ||
+	    Math.abs(anchor.ipos.y - ipos.y) > ANCHORSLOP ){
+	    anchor = im.tmp.wheelAnchor = {dpos: dpos, ipos: ipos};
+	}
+    }
     // zoom the image
     im.setZoom(nzoom);
+    // zoom about the mouse rather than the center of the display: whatever
+    // pixel is under the mouse now, shift the pan by the difference so the
+    // anchored pixel ends up there instead. Going through the display
+    // transform (rather than scaling the offset) keeps this right when the
+    // image is flipped or rotated.
+    if( anchor ){
+	npos = im.displayToImagePos(anchor.dpos);
+	pan = im.getPan();
+	im.setPan(pan.x + (anchor.ipos.x - npos.x),
+		  pan.y + (anchor.ipos.y - npos.y));
+    }
 };
 
 // pan the image

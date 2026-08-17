@@ -28,7 +28,15 @@ or touch/pinch will zoom the image. The default actions are:
 <li> <b>mouseActions:</b> ["display value/position", "change contrast/bias", "pan the image"]
 <li> <b>touchActions:</b> ["display value/position", "change contrast/bias", "pan the image"]
 <li> <b>mousetouchZoom:</b> true
+<li> <b>mousetouchZoomToCursor:</b> true
 </ul>
+A wheel zoom is centered on the mouse: whichever image pixel is under the
+pointer stays under it as the image grows or shrinks, so you can scroll in
+on a source without having to pan afterwards. Set
+<b>JS9.globalOpts.mousetouchZoomToCursor</b> to false to zoom about the
+center of the display instead.
+
+<p>
 where the array elements map to an increasing numbers of
 buttons/fingers.  You can change the default actions of the elements
 in either array in your js9Prefs.json file. For example, to make pan

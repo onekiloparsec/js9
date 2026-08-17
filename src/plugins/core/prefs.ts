@@ -546,6 +546,10 @@ JS9.Prefs.globalsSchema = {
 	    "type": "boolean",
 	    "helper": "scroll/pinch to zoom?"
 	},
+	"mousetouchZoomToCursor": {
+	    "type": "boolean",
+	    "helper": "scroll zooms about the mouse position?"
+	},
 	"mousetouchLimit": {
 	    "type": "boolean",
 	    "helper": "limit zoom-out to the size of the image?"
