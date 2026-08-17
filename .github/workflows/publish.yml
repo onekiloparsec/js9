@@ -34,9 +34,15 @@ jobs:
 
       - name: Build Library
         # Only the published `files` glob (dist/library) is needed to
-        # publish; build:lib runs prebuild (runtime ts + runtime bundle)
-        # and produces UMD, ESM, and .d.ts artifacts under dist/library.
-        run: npm run build:lib
+        # publish; build:lib:plugins runs prebuild (runtime ts + runtime
+        # bundle) and produces UMD, ESM, and .d.ts artifacts under
+        # dist/library.
+        #
+        # :plugins, not plain build:lib: the latter skips the plugin
+        # manifest, so the package shipped without plugins/ at all and
+        # loadJS9Runtime({includePlugins: true}) 404'd on every script in
+        # its own default list. Costs ~250kB packed.
+        run: npm run build:lib:plugins
 
       - name: Publish Package
         run: npm publish
