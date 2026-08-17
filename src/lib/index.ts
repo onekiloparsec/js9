@@ -16,7 +16,11 @@ export type {
     JS9ImageInfo,
     JS9RegionOptions,
     JS9DisplayTarget,
-    JS9DisplayLike
+    JS9DisplayLike,
+    JS9StatSummary,
+    JS9Star,
+    JS9StarMetrics,
+    JS9StarMetricsOptions
 } from "./types";
 
 // Declare the globalThis shape used internally by the loader.

@@ -163,6 +163,65 @@ export interface JS9RegionOptions {
     [key: string]: unknown;
 }
 
+/** Summary of one measured quantity over the detected stars. */
+export interface JS9StatSummary {
+    median: number;
+    mean: number;
+    /** Not reported for every statistic (eccentricity omits it). */
+    stddev?: number;
+}
+
+/** One detected star, in image coordinates. */
+export interface JS9Star {
+    x: number;
+    y: number;
+    /** Half-flux radius, in pixels. */
+    hfr: number;
+    /** Full width at half maximum, in pixels. */
+    fwhm: number;
+    /** Background-subtracted integrated flux. */
+    flux: number;
+    /** Brightest pixel value. */
+    peak: number;
+    /** Gaussian sigma along each axis, in pixels. */
+    sigmaX: number;
+    sigmaY: number;
+    /** 0 for a round star, approaching 1 as it elongates. */
+    eccentricity: number;
+}
+
+/** Result of Image.computeStarMetrics() / JS9.ComputeStarMetrics(). */
+export interface JS9StarMetrics {
+    /** Stars detected in the whole frame. */
+    count: number;
+    /** Stars actually returned in `stars`, capped by maxStarsReturned. */
+    returned?: number;
+    /** Identifier of the detector that produced these numbers. */
+    algorithm?: string;
+    hfr?: JS9StatSummary;
+    fwhm?: JS9StatSummary;
+    eccentricity?: JS9StatSummary;
+    /** Sigma-clipped background median. */
+    background?: number;
+    /** Sigma-clipped background standard deviation (image "noise"). */
+    noise?: number;
+    /** Detection threshold applied (typically background + N*noise). */
+    threshold?: number;
+    stars?: JS9Star[];
+}
+
+export interface JS9StarMetricsOptions {
+    /** Detection threshold in units of background noise. Default 5. */
+    sigmaThreshold?: number;
+    /** Smallest and largest accepted blob, in pixels. Default 3 / 1024. */
+    minSize?: number;
+    maxSize?: number;
+    /** Largest accepted star radius, in pixels. Default 12. */
+    maxRadius?: number;
+    /** Cap on the length of `stars`. Default 500. */
+    maxStarsReturned?: number;
+}
+
 /**
  * The JS9 runtime namespace returned by loadJS9Runtime().
  *
@@ -191,6 +250,13 @@ export interface JS9Namespace {
 
     // --- Image info ---
     GetImageData(fits?: boolean, target?: JS9PublicCallTarget): JS9ImageInfo | null;
+
+    // --- Statistics ---
+    /** Detect stars and summarise HFR/FWHM/eccentricity for the loaded image. */
+    ComputeStarMetrics(
+        opts?: JS9StarMetricsOptions,
+        target?: JS9PublicCallTarget
+    ): JS9StarMetrics | null;
 
     // --- Displays ---
     GetDisplays(): JS9DisplayLike[];
