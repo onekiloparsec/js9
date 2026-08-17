@@ -263,7 +263,7 @@ JS9.globalOpts = {
 	"rightArrow": "move region/position right",
 	"downArrow": "move region/position down"
     }, // keyboard actions
-    mousetouchZoom: false,	// use mouse wheel, pinch to zoom?
+    mousetouchZoom: true,	// use mouse wheel, pinch to zoom?
     mousetouchLimit: true,	// limit zoom-out to size of image?
     metaClickPan: true,         // metaKey + click pans to mouse position?
     // statusBar: "$mag; $scale($scaleclipping); $img(images/voyager/color_$colormap.png) $colormap; $wcssys; $image",  // status display

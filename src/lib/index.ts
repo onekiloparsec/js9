@@ -67,6 +67,7 @@ const DEFAULT_PLUGIN_SCRIPTS = [
     "plugins/imexam/regstat.js",
     "plugins/imexam/xyproj.js",
     "plugins/imexam/3dplot.js",
+    "plugins/imexam/closeup.js",
     "plugins/imexam/contour.js"
 ];
 

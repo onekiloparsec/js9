@@ -18,6 +18,7 @@ onMounted(async () => {
         "plugins/core/toolbar.js",
         "plugins/core/colorbar.js",
         "plugins/core/statusbar.js",
+        "plugins/imexam/closeup.js",
         "plugins/external/simbad.js"
       ],
       styles: [

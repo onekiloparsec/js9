@@ -46,7 +46,14 @@ JS9.Fabric.opts = {
     sortOverlapping: false
 };
 
-const clone = (obj) => JS9.extend(true, Array.isArray(obj) ? [] : {}, obj || {});
+// deep copy of an object or array; anything else is returned as-is
+// (JS9.extend would turn a number or a string into an empty object)
+const clone = (obj) => {
+    if( !obj || (typeof obj !== "object") ){
+        return obj;
+    }
+    return JS9.extend(true, Array.isArray(obj) ? [] : {}, obj);
+};
 const nextId = (layer) => {
     layer.nshape = layer.nshape || 1;
     const id = `${layer.layerName || "shape"}${layer.nshape}`;
@@ -111,20 +118,297 @@ const shapeCenter = (shape) => {
         y: toNumber(shape.top, toNumber(shape.y, 0))
     };
 };
-const syncPublicShape = (shape, layerName) => {
+
+// ---------------------------------------------------------------------
+// image <-> display geometry
+//
+// Shapes are drawn in display coordinates, but the public API, region
+// strings and region files all speak image coordinates. So each shape on
+// an image layer keeps its canonical geometry in image space (shape.img)
+// and the drawn values are derived from it on every render: that way
+// shapes stay pinned to the same pixels when the image is panned, zoomed,
+// flipped or rotated.
+//
+// Layers hosted outside the display (dtype "other", e.g. the magnifier
+// box) have no image transform, so they keep raw canvas coordinates.
+// ---------------------------------------------------------------------
+
+const isImageLayer = (dlayer) => !!dlayer && dlayer.dtype !== "other";
+
+// display pixels per image pixel
+const displayZoom = (im) => {
+    const zoom = im?.rgb?.sect?.zoom;
+    return JS9.isNumber(zoom) && zoom ? zoom : 1;
+};
+
+// the image whose geometry a shape in this layer is expressed in,
+// or null when the layer is not tied to the displayed image
+const layerImage = (layer) => {
+    const dlayer = layer?.dlayer || layer;
+    if( !isImageLayer(dlayer) ){
+        return null;
+    }
+    return dlayer?.display?.image || null;
+};
+
+const toImagePos = (im, pos) => {
+    const p = im.displayToImagePos({x: pos.x, y: pos.y});
+    return {x: p.x, y: p.y};
+};
+
+const toDisplayPos = (im, pos) => {
+    const p = im.imageToDisplayPos({x: pos.x, y: pos.y});
+    return {x: p.x, y: p.y};
+};
+
+// derive the drawn (display) geometry from the shape's image geometry
+const applyImageGeometry = (im, shape) => {
+    let center;
+    const img = shape?.img;
+    if( !im || !img ){
+        return shape;
+    }
+    const zoom = displayZoom(im);
+    if( Array.isArray(img.points) && img.points.length ){
+        shape.points = img.points.map((point) => toDisplayPos(im, point));
+    }
+    if( JS9.isNumber(img.x) && JS9.isNumber(img.y) ){
+        center = toDisplayPos(im, img);
+    } else if( shape.points && shape.points.length ){
+        center = shapeCenter(shape);
+    }
+    if( center ){
+        shape.left = center.x;
+        shape.top = center.y;
+    }
+    if( JS9.isNumber(img.radius) ){ shape.radius = img.radius * zoom; }
+    if( JS9.isNumber(img.width)  ){ shape.width  = img.width  * zoom; }
+    if( JS9.isNumber(img.height) ){ shape.height = img.height * zoom; }
+    if( img.eradius ){
+        shape.eradius = {x: img.eradius.x * zoom, y: img.eradius.y * zoom};
+    }
+    return shape;
+};
+
+// the inverse: record image geometry from the drawn (display) geometry.
+// Used when a shape is positioned in display coordinates, and after any
+// display-space edit, so the next render is a no-op instead of a jump.
+const captureImageGeometry = (im, shape) => {
+    let center;
+    if( !im || !shape ){
+        return shape;
+    }
+    const zoom = displayZoom(im);
+    const img = shape.img = shape.img || {};
+    if( Array.isArray(shape.points) && shape.points.length ){
+        img.points = shape.points.map((point) => toImagePos(im, point));
+    }
+    if( JS9.isNumber(shape.left) && JS9.isNumber(shape.top) ){
+        center = {x: shape.left, y: shape.top};
+    } else if( shape.points && shape.points.length ){
+        center = shapeCenter(shape);
+    }
+    if( center ){
+        const pos = toImagePos(im, center);
+        img.x = pos.x;
+        img.y = pos.y;
+    }
+    if( JS9.isNumber(shape.radius) ){ img.radius = shape.radius / zoom; }
+    if( JS9.isNumber(shape.width)  ){ img.width  = shape.width  / zoom; }
+    if( JS9.isNumber(shape.height) ){ img.height = shape.height / zoom; }
+    if( shape.eradius ){
+        img.eradius = {x: shape.eradius.x / zoom, y: shape.eradius.y / zoom};
+    }
+    return shape;
+};
+
+// read the geometry out of a set of shape options into image space.
+//
+// x/y, radius, width, height, r1/r2 and pts[{x,y}] are image units, which
+// is what the public API, region strings and region files use. dx/dy,
+// left/top and points[{x,y}] are display units, used internally and by
+// callers that work directly on the canvas. Anything absent falls back to
+// the layer defaults, which are display units so that a freshly created
+// region has the same size on screen at any zoom.
+const readGeometry = (im, shape, opts, defaults) => {
+    let pos, pts;
+    const zoom = displayZoom(im);
+    const img = {};
+    // only these are drawn from a list of vertices
+    const ispoly = (shape === "line") || (shape === "polygon") ||
+                   (shape === "polyline");
+    const num = (value) => JS9.isNumber(value) ? value : undefined;
+    const ilen = (value, dvalue) => {
+        if( JS9.isNumber(value) ){ return value; }
+        return JS9.isNumber(dvalue) ? dvalue / zoom : undefined;
+    };
+    // --- vertices, for line/polygon/polyline
+    if( !ispoly ){
+        pts = null;
+    } else if( Array.isArray(opts.pts) && opts.pts.length ){
+        // region-string vertices: image coords, or display coords as dx/dy
+        pts = opts.pts.map((point) => {
+            if( JS9.isNumber(point.dx) && JS9.isNumber(point.dy) ){
+                return toImagePos(im, {x: point.dx, y: point.dy});
+            }
+            return {x: num(point.x) || 0, y: num(point.y) || 0};
+        });
+    } else if( Array.isArray(opts.points) && opts.points.length ){
+        // display coords
+        pts = opts.points.map((point) => toImagePos(im, point));
+    }
+    // --- center
+    if( JS9.isNumber(opts.x) && JS9.isNumber(opts.y) ){
+        pos = {x: opts.x, y: opts.y};
+    } else if( JS9.isNumber(opts.dx) && JS9.isNumber(opts.dy) ){
+        pos = toImagePos(im, {x: opts.dx, y: opts.dy});
+    } else if( JS9.isNumber(opts.left) && JS9.isNumber(opts.top) ){
+        pos = toImagePos(im, {x: opts.left, y: opts.top});
+    } else if( pts && pts.length ){
+        pos = null;
+    } else {
+        // nothing given: put it in the middle of the display
+        pos = toImagePos(im, {x: im.display.canvas.width  / 2,
+                              y: im.display.canvas.height / 2});
+    }
+    // --- default vertices are offsets, in display units, from the center
+    if( ispoly && !pts ){
+        const offsets = shape === "line" ? defaults.linepoints : defaults.polypoints;
+        if( Array.isArray(offsets) && offsets.length && pos ){
+            const center = toDisplayPos(im, pos);
+            pts = offsets.map((offset) => toImagePos(im, {
+                x: center.x + toNumber(offset.x, 0),
+                y: center.y + toNumber(offset.y, 0)
+            }));
+        }
+    }
+    if( pts && pts.length ){
+        img.points = pts;
+        // vertices given without a center: the center is their centroid
+        if( !pos ){
+            pos = {
+                x: pts.reduce((sum, point) => sum + point.x, 0) / pts.length,
+                y: pts.reduce((sum, point) => sum + point.y, 0) / pts.length
+            };
+        }
+    }
+    if( pos ){
+        img.x = pos.x;
+        img.y = pos.y;
+    }
+    // --- sizes
+    img.radius = ilen(opts.radius, defaults.radius);
+    img.width  = ilen(opts.width,  defaults.width);
+    img.height = ilen(opts.height, defaults.height);
+    if( JS9.isNumber(opts.r1) || JS9.isNumber(opts.r2) ){
+        img.eradius = {x: ilen(opts.r1, defaults.r1),
+                       y: ilen(opts.r2, defaults.r2)};
+    } else if( opts.eradius &&
+               JS9.isNumber(opts.eradius.x) && JS9.isNumber(opts.eradius.y) ){
+        // an eradius from a pub is image units, from the defaults it is not
+        img.eradius = {x: opts.eradius.x, y: opts.eradius.y};
+    } else {
+        img.eradius = {x: ilen(undefined, defaults.r1 ?? defaults.eradius?.x),
+                       y: ilen(undefined, defaults.r2 ?? defaults.eradius?.y)};
+    }
+    return img;
+};
+
+// region-string arguments for a shape, in whatever units geom is in
+const shapeArgs = (shape, geom, fmt) => {
+    const points = Array.isArray(geom.points) ? geom.points : [];
+    switch(shape.shape){
+    case "line":
+    case "polygon":
+    case "polyline":
+        return points.map((point) => `${fmt(point.x)},${fmt(point.y)}`).join(",");
+    case "circle":
+        return `${fmt(geom.x)},${fmt(geom.y)},${fmt(geom.radius)}`;
+    case "ellipse":
+        return `${fmt(geom.x)},${fmt(geom.y)},${fmt(geom.eradius?.x)},${fmt(geom.eradius?.y)},${normalizeAngle(shape.angle)}`;
+    case "text":
+        return `${fmt(geom.x)},${fmt(geom.y)},"${shape.text || ""}"`;
+    case "box":
+        return `${fmt(geom.x)},${fmt(geom.y)},${fmt(geom.width)},${fmt(geom.height)},${normalizeAngle(shape.angle)}`;
+    default:
+        return `${fmt(geom.x)},${fmt(geom.y)}`;
+    }
+};
+
+// the wcs counterpart of shapeArgs: position in the current wcs system,
+// lengths in arcsec (region wcs sizes are always based on cdelt)
+const wcsShapeArgs = (im, shape, geom) => {
+    let arr;
+    const wcsinfo = im.raw.wcsinfo || {cdelt1: 1, cdelt2: 1};
+    const fmtlen = (value, which) => {
+        const cdelt = which === 2 ? wcsinfo.cdelt2 : wcsinfo.cdelt1;
+        if( !JS9.isNumber(value) || !cdelt ){ return "0"; }
+        return `${Math.abs(value * cdelt * 3600).toFixed(4)}"`;
+    };
+    const wcspos = (pos) => {
+        try{ arr = JS9.pix2wcs(im.raw.wcs, pos.x, pos.y).trim().split(/\s+/); }
+        catch(ignore){ return null; }
+        return (arr && arr.length >= 2) ? `${arr[0]},${arr[1]}` : null;
+    };
+    const points = Array.isArray(geom.points) ? geom.points : [];
+    switch(shape.shape){
+    case "line":
+    case "polygon":
+    case "polyline": {
+        const strs = points.map(wcspos);
+        return strs.every(Boolean) ? strs.join(",") : null;
+    }
+    default: {
+        const center = wcspos(geom);
+        if( !center ){ return null; }
+        switch(shape.shape){
+        case "circle":
+            return `${center},${fmtlen(geom.radius, 1)}`;
+        case "ellipse":
+            return `${center},${fmtlen(geom.eradius?.x, 1)},${fmtlen(geom.eradius?.y, 2)},${normalizeAngle(shape.angle)}`;
+        case "text":
+            return `${center},"${shape.text || ""}"`;
+        case "box":
+            return `${center},${fmtlen(geom.width, 1)},${fmtlen(geom.height, 2)},${normalizeAngle(shape.angle)}`;
+        default:
+            return center;
+        }
+    }
+    }
+};
+
+const syncPublicShape = (im, shape, layerName) => {
+    let geom, lpos;
     const pub = shape.pub || {};
-    const center = shapeCenter(shape);
+    const fmt = (value) => JS9.isNumber(value) ? value.toFixed(2) : "0";
+    // image geometry for an image layer, display geometry otherwise
+    if( im && shape.img ){
+        geom = shape.img;
+    } else {
+        const center = shapeCenter(shape);
+        geom = {x: center.x, y: center.y,
+                radius: shape.radius, width: shape.width, height: shape.height,
+                eradius: shape.eradius,
+                points: Array.isArray(shape.points) ? shape.points : undefined};
+    }
     pub.id = shape.id;
     pub.shape = shape.shape || shape.type;
     pub.layer = layerName;
-    pub.x = center.x;
-    pub.y = center.y;
+    pub.x = geom.x;
+    pub.y = geom.y;
+    // display coordinates, for callers working directly on the canvas
+    pub.dx = shape.left;
+    pub.dy = shape.top;
     pub.left = shape.left;
     pub.top = shape.top;
-    pub.width = shape.width;
-    pub.height = shape.height;
-    pub.radius = shape.radius;
-    pub.eradius = shape.eradius ? clone(shape.eradius) : undefined;
+    pub.width = geom.width;
+    pub.height = geom.height;
+    pub.radius = geom.radius;
+    pub.eradius = geom.eradius ? clone(geom.eradius) : undefined;
+    if( geom.eradius ){
+        pub.r1 = geom.eradius.x;
+        pub.r2 = geom.eradius.y;
+    }
     pub.radii = shape.radii ? clone(shape.radii) : undefined;
     pub.angle = normalizeAngle(shape.angle);
     pub.color = getShapeColor(shape, null);
@@ -135,9 +419,32 @@ const syncPublicShape = (shape, layerName) => {
     pub.fontFamily = shape.fontFamily;
     pub.tags = clone(shape.tags || []);
     pub.data = clone(shape.data || {});
-    pub.pts = Array.isArray(shape.points) ? makePoints(shape.points) : undefined;
-    if( Array.isArray(shape.points) && shape.points.length >= 2 ){
-        pub.imstr = shape.points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(",");
+    pub.pts = Array.isArray(geom.points) ? makePoints(geom.points) : undefined;
+    // backlink to the shape object: listRegions and friends reach through it.
+    // Non-enumerable, so the cycle it creates is invisible to the deep copies
+    // and JSON serialization that pubs get put through.
+    if( pub.obj !== shape ){
+        Object.defineProperty(pub, "obj", {
+            value: shape, writable: true, configurable: true, enumerable: false
+        });
+    }
+    // region strings, as consumed by listRegions/saveRegions
+    pub.imsys = "image";
+    pub.imstr = `${pub.shape}(${shapeArgs(shape, geom, fmt)})`;
+    delete pub.wcsstr;
+    delete pub.wcssys;
+    delete pub.lcs;
+    if( im ){
+        // physical coordinates, for the region config dialog
+        lpos = im.imageToLogicalPos({x: geom.x, y: geom.y});
+        pub.lcs = {x: lpos.x, y: lpos.y, sys: "physical"};
+        if( im.validWCS && im.validWCS() ){
+            const wcsargs = wcsShapeArgs(im, shape, geom);
+            if( wcsargs ){
+                pub.wcsstr = `${pub.shape}(${wcsargs})`;
+                pub.wcssys = im.params.wcssys;
+            }
+        }
     }
     shape.pub = pub;
     return shape;
@@ -147,6 +454,7 @@ const serializableShape = (shape) => {
         id: shape.id,
         type: shape.type,
         shape: shape.shape,
+        img: shape.img ? clone(shape.img) : undefined,
         left: shape.left,
         top: shape.top,
         width: shape.width,
@@ -329,9 +637,13 @@ const renderLayer = (dlayer) => {
     const image = dlayer.display.image;
     const layer = image && image.layers ? image.layers[dlayer.layerName] : null;
     const objects = layer?.objects || dlayer.canvas.objects || [];
+    // shapes on an image layer are pinned to image coordinates, so recompute
+    // where they land now: the display transform may have changed under them
+    const im = isImageLayer(dlayer) ? image : null;
     dlayer.canvas.objects = objects;
     objects.forEach((shape) => {
         if( shape && !shape.hidden && shape.type !== "activeSelection" && shape.type !== "group" ){
+            if( im ){ applyImageGeometry(im, shape); }
             drawShape(ctx, shape, layer || dlayer);
         }
     });
@@ -493,14 +805,35 @@ const bindLayerToDisplay = (image, layerName) => {
     renderLayer(dlayer);
     return ilayer;
 };
+// shape properties worth writing back into a region string, when the
+// caller set them. Geometry is excluded: it is emitted as the region args.
+// NB: tags are emitted as the region comment, not as a property.
+const EXPORT_KEYS = new Set([
+    "color", "strokeWidth", "strokeDashArray",
+    "fontSize", "fontFamily", "fontStyle", "fontWeight",
+    "angle", "text", "textOpts", "data", "id", "wcsconfig",
+    "originX", "originY",
+    "changeable", "movable", "removable", "resizable", "rotatable",
+    "selectable", "sticky", "ignore"
+]);
+
 const createShapeObject = (image, layerName, shapeName, opts) => {
     const layer = ensureImageLayer(image, layerName);
     const baseOpts = JS9.extend(true, {}, JS9.Fabric.opts, layer?.opts || {}, opts || {});
+    // an image layer positions its shapes in image coordinates; anything
+    // else (e.g. the magnifier box) works straight on its own canvas
+    const im = layerImage(layer);
+    const defaults = JS9.extend(true, {}, JS9.Fabric.opts, layer?.opts || {});
+    // a serialized shape already carries its image geometry
+    const img = !im ? null
+        : (opts?.img ? clone(opts.img)
+                     : readGeometry(im, shapeName, opts || {}, defaults));
     const shape = {
         id: baseOpts.id || nextId(layer),
         layer: layerName,
         type: shapeName,
         shape: shapeName,
+        img,
         left: toNumber(baseOpts.left, toNumber(baseOpts.x, 0)),
         top: toNumber(baseOpts.top, toNumber(baseOpts.y, 0)),
         width: toNumber(baseOpts.width, JS9.Fabric.opts.width),
@@ -518,7 +851,16 @@ const createShapeObject = (image, layerName, shapeName, opts) => {
         fontFamily: baseOpts.fontFamily || JS9.Fabric.opts.fontFamily,
         tags: Array.isArray(baseOpts.tags) ? clone(baseOpts.tags) : (typeof baseOpts.tags === "string" ? baseOpts.tags.split(",").map((tag) => tag.trim()).filter(Boolean) : []),
         data: clone(baseOpts.data || {}),
-        params: clone(baseOpts),
+        params: JS9.extend(true, clone(baseOpts), {
+            layerName,
+            shape: shapeName,
+            // properties listRegions/saveRegions should write back out: only
+            // the ones the caller actually set, so round-tripped regions do
+            // not grow a copy of every layer default
+            exports: Object.keys(opts || {}).filter((key) => EXPORT_KEYS.has(key)),
+            // text children are not implemented by this engine
+            children: []
+        }),
         hidden: !!baseOpts.hidden,
         selectable: baseOpts.selectable !== false,
         removable: baseOpts.removable !== false,
@@ -532,11 +874,14 @@ const createShapeObject = (image, layerName, shapeName, opts) => {
             cb(this);
         }
     };
-    if( !shape.points.length && shape.shape === "line" ){
+    if( im ){
+        // derive the drawn geometry from the image geometry we just read
+        applyImageGeometry(im, shape);
+    } else if( !shape.points.length && shape.shape === "line" ){
         const width = toNumber(shape.width, 0);
         shape.points = [{x: shape.left - width / 2, y: shape.top}, {x: shape.left + width / 2, y: shape.top}];
     }
-    return syncPublicShape(shape, layerName);
+    return syncPublicShape(im, shape, layerName);
 };
 const selectorToIds = (canvas) => {
     return canvas.getActiveObjects().map((shape) => shape.id);
@@ -650,6 +995,16 @@ JS9.Fabric.addShapes = function(layerName, shape, myopts){
     const layer = ensureImageLayer(this, layerName, myopts);
     const objects = [];
     const opts = clone(myopts || {});
+    const im = layerImage(layer);
+    const addOne = (entry) => {
+        const type = entry.shape || entry.type || opts.shape || layer.opts.shape || "box";
+        if( !SHAPE_TYPES.has(type) ){
+            return;
+        }
+        // per-shape options win over the options common to the whole call
+        objects.push(createShapeObject(this, layerName, type,
+                                       JS9.extend(true, {}, opts, entry)));
+    };
     if( !layer ){
         return null;
     }
@@ -659,27 +1014,29 @@ JS9.Fabric.addShapes = function(layerName, shape, myopts){
     if( Array.isArray(shape) ){
         shape.forEach((entry) => {
             if( typeof entry === "object" ){
-                const type = entry.shape || entry.type || opts.shape || layer.opts.shape || "box";
-                if( SHAPE_TYPES.has(type) ){
-                    objects.push(createShapeObject(this, layerName, type, entry));
-                }
+                addOne(entry);
             }
         });
     } else if( typeof shape === "object" && !Array.isArray(shape) ){
-        const type = shape.shape || shape.type || opts.shape || layer.opts.shape || "box";
-        if( SHAPE_TYPES.has(type) ){
-            objects.push(createShapeObject(this, layerName, type, shape));
-        }
+        addOne(shape);
     } else if( typeof shape === "string" ){
         if( SHAPE_TYPES.has(shape) ){
             objects.push(createShapeObject(this, layerName, shape, opts));
         } else if( shape.trim() === "" ){
             return opts.rtn === "objs" ? [] : null;
+        } else if( typeof this.parseRegions === "function" ){
+            // a region string, e.g. 'circle(265,380,10) # source'
+            // or a whole region file: parse it into per-shape options
+            this.parseRegions(shape, opts).forEach((entry) => {
+                if( entry && !entry.remove ){
+                    addOne(entry);
+                }
+            });
         }
     }
     objects.forEach((obj) => {
         layer.objects.push(obj);
-        syncPublicShape(obj, layerName);
+        syncPublicShape(im, obj, layerName);
     });
     bindLayerToDisplay(this, layerName);
     layer.canvas.renderAll();
@@ -840,32 +1197,99 @@ JS9.Fabric.removeShapes = function(layerName, shape, opts){
 JS9.Fabric.getShapes = function(layerName, shape, opts){
     const layer = this.getShapeLayer(layerName);
     const matches = layer ? selectObjects(layer, shape || "all") : [];
+    const im = layerImage(layer);
     opts = opts || {};
     if( opts.format === "text" ){
-        return matches.map((obj) => `${obj.shape}(${obj.pub?.imstr || `${obj.pub?.x || 0},${obj.pub?.y || 0}`})`).join(";\n");
+        return matches
+            .map((obj) => syncPublicShape(im, obj, layerName).pub.imstr)
+            .join(";\n");
     }
-    return matches.map((obj) => syncPublicShape(obj, layerName).pub);
+    return matches.map((obj) => syncPublicShape(im, obj, layerName).pub);
 };
+
+// geometry keys of changeShapes(), in image units on an image layer
+const IMAGE_GEOMETRY_KEYS = new Set(["x", "y", "radius", "width", "height",
+                                     "r1", "r2", "eradius", "pts",
+                                     "deltax", "deltay"]);
 
 JS9.Fabric.changeShapes = function(layerName, shape, opts){
     const layer = this.getShapeLayer(layerName);
     const matches = layer ? selectObjects(layer, shape || "selected") : [];
+    const im = layerImage(layer);
     opts = opts || {};
     matches.forEach((obj) => {
+        let touchedDisplay = false;
         Object.keys(opts).forEach((key) => {
-            if( key === "x" ){
+            if( im && IMAGE_GEOMETRY_KEYS.has(key) ){
+                // image-space geometry: recorded now, drawn on the next render
+                obj.img = obj.img || {};
+                switch(key){
+                case "deltax":
+                case "deltay": {
+                    // shift by whole image pixels, outline included
+                    const axis = key === "deltax" ? "x" : "y";
+                    const delta = toNumber(opts[key], 0);
+                    if( JS9.isNumber(obj.img[axis]) ){
+                        obj.img[axis] += delta;
+                    }
+                    if( Array.isArray(obj.img.points) ){
+                        obj.img.points.forEach((point) => {
+                            point[axis] += delta;
+                        });
+                    }
+                    break;
+                }
+                case "r1":
+                    obj.img.eradius = obj.img.eradius || {};
+                    obj.img.eradius.x = toNumber(opts[key], obj.img.eradius.x);
+                    break;
+                case "r2":
+                    obj.img.eradius = obj.img.eradius || {};
+                    obj.img.eradius.y = toNumber(opts[key], obj.img.eradius.y);
+                    break;
+                case "eradius":
+                    obj.img.eradius = clone(opts[key]);
+                    break;
+                case "pts": {
+                    const pts = makePoints(opts[key]);
+                    obj.img.points = pts;
+                    // a new outline moves the center with it
+                    if( pts.length ){
+                        obj.img.x = pts.reduce((sum, p) => sum + p.x, 0) / pts.length;
+                        obj.img.y = pts.reduce((sum, p) => sum + p.y, 0) / pts.length;
+                    }
+                    break;
+                }
+                default:
+                    obj.img[key] = toNumber(opts[key], obj.img[key]);
+                    break;
+                }
+            } else if( key === "x" ){
                 obj.left = toNumber(opts[key], obj.left);
+                touchedDisplay = true;
             } else if( key === "y" ){
                 obj.top = toNumber(opts[key], obj.top);
+                touchedDisplay = true;
             } else if( key === "tags" ){
                 obj.tags = Array.isArray(opts[key]) ? clone(opts[key]) : String(opts[key]).split(",").map((tag) => tag.trim()).filter(Boolean);
             } else if( key === "points" ){
                 obj.points = makePoints(opts[key]);
+                touchedDisplay = true;
             } else {
                 obj[key] = clone(opts[key]);
+                if( key === "left" || key === "top" ){
+                    touchedDisplay = true;
+                }
             }
         });
-        syncPublicShape(obj, layerName);
+        if( im ){
+            if( touchedDisplay ){
+                // positioned on the canvas: keep the image geometry in step
+                captureImageGeometry(im, obj);
+            }
+            applyImageGeometry(im, obj);
+        }
+        syncPublicShape(im, obj, layerName);
     });
     if( layer ){
         layer.canvas.renderAll();
@@ -875,7 +1299,15 @@ JS9.Fabric.changeShapes = function(layerName, shape, opts){
 
 JS9.Fabric.refreshShapes = function(layerName){
     const layer = this.getShapeLayer(layerName);
+    const im = layerImage(layer);
     if( layer ){
+        // the display transform may have changed: re-derive positions
+        if( im ){
+            (layer.objects || []).forEach((obj) => {
+                applyImageGeometry(im, obj);
+                syncPublicShape(im, obj, layerName);
+            });
+        }
         layer.canvas.renderAll();
     }
     return this;

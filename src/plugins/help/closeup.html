@@ -1,0 +1,40 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<link type="text/css" rel="stylesheet" href="../../js9.css">
+<title>Plugin: ImExamCloseUp</title>
+</head>
+<body>
+<div class="helpLogo"><img src="../../images/js9logo.png" alt="js9"></div>
+<div class="helpContainer">
+<h3>JS9 Close-up</h3>
+
+<p>
+The Close-up plugin, available from the <b>Analysis</b> menu, opens a
+resizable window showing a magnified view of the display centered on the
+mouse position. It updates live as the mouse moves over the image.
+
+<p>
+The pixel under the cursor is outlined in green and pointed at by tick
+marks from the edges of the window. Underneath the view, a readout gives
+the image coordinates and value of that pixel, plus its WCS position when
+the image has a valid WCS.
+
+<p>
+The magnification defaults to eight display pixels per close-up pixel. It
+can be changed with the command buttons at the top of the window, or by
+scrolling the mouse wheel over the close-up itself. Because the view is
+taken from the display, it reflects the current colormap, scale,
+contrast/bias, flip and rotation, and it overlays regions in the same way
+the <b>Magnifier</b> plugin does.
+
+<p>
+Defaults are set in the <b>JS9.CloseUp.opts</b> object: <b>zoom</b> (initial
+magnification), <b>minZoom</b> and <b>maxZoom</b>, <b>markerColor</b>,
+<b>background</b>, and <b>regions</b> (whether to overlay the regions layer).
+
+</div>
+</body>
+</html>

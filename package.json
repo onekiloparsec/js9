@@ -1,6 +1,6 @@
 {
   "name": "@onekiloparsec/js9",
-  "version": "4.5.1",
+  "version": "4.6.0",
   "description": "astronomical image display everywhere",
   "main": "dist/library/js9.umd.js",
   "module": "dist/library/js9.es.js",

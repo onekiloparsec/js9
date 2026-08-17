@@ -10,6 +10,7 @@ function JS9InstallViewerEvents(JS9){
     
     // mousedown: assumes display obj is passed in evt.data
     JS9.mouseDownCB = function(evt){
+        let touches;
         const display = evt.data;
         const im = display.image;
         const scroll = JS9.getDocumentScroll();
@@ -37,6 +38,23 @@ function JS9InstallViewerEvents(JS9){
         im.ipos = im.ipos0;
         // in the resize area?
         display.resizing = display.inResize(im.pos);
+        // set click state to current mouse button (before running the start
+        // action, which dispatches on clickState to find the mouse action)
+        im.clickState = JS9.eventMouseButton(evt);
+        switch(im.clickState){
+        case 1:
+        case 2:
+    	break;
+        case 3:
+    	// secondary mouse click
+    	im.clickState = 2;
+    	break;
+        }
+        // override click state with touch state, if possible
+        touches = JS9.eventTouches(evt);
+        if( touches && touches.length ){
+    	im.clickState = -touches.length;
+        }
         // normal (non-resizing) processing
         if( !display.resizing ){
     	evt.preventDefault();
@@ -54,22 +72,6 @@ function JS9InstallViewerEvents(JS9){
     	if( !JS9.specialKey(evt) ){
     	    im.xeqPlugins("mouse", "onmousedown", evt);
     	}
-        }
-        // set click state to current mouse button
-        im.clickState = evt.which;
-        switch(evt.which){
-        case 1:
-        case 2:
-    	break;
-        case 3:
-    	// secondary mouse click
-    	im.clickState = 2;
-    	break;
-        }
-        // override click state with touch state, if possible
-        if( evt.originalEvent &&
-    	evt.originalEvent.touches && evt.originalEvent.touches.length ){
-    	im.clickState = -evt.originalEvent.touches.length;
         }
         // add this display's callbacks on the whole document
         display.tmp = display.tmp || {};

@@ -219,9 +219,10 @@ JS9.MouseTouch.Actions["wheel zoom"] = function(im, evt){
     let ozoom, nzoom, maxzoom, key;
     let floor = JS9.globalOpts.panzoomRefreshLimit;
     let got = 0;
-    const delta = evt.originalEvent.deltaY * Math.sign(JS9.DIRZOOM);
+    const oevt = JS9.eventNative(evt) || {};
+    const delta = (oevt.deltaY || 0) * Math.sign(JS9.DIRZOOM);
     // sanity check
-    if( !im ){ return; }
+    if( !im || !delta ){ return; }
     // is scroll to zoom turned on?
     if( !JS9.globalOpts.mousetouchZoom ){
 	return;

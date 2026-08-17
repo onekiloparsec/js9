@@ -312,8 +312,12 @@ JS9.Display = function(el){
     this.divjq.on("drop", this, (evt) => {
 	return JS9.dragdropCB(this.id, evt);
     });
-    // no context menus on the display
-    this.divjq.on("contextmenu", this, () => {
+    // no context menus on the display: the secondary button is a JS9 action
+    // (by default "pan the image"), so the browser menu must not steal it.
+    // NB: returning false only cancelled the default under jQuery, so the
+    // native listener has to call preventDefault() explicitly.
+    this.divjq.on("contextmenu", this, (evt) => {
+	evt.preventDefault();
 	return false;
     });
     // add local file open support

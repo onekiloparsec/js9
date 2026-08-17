@@ -27,15 +27,15 @@ or touch/pinch will zoom the image. The default actions are:
 <ul>
 <li> <b>mouseActions:</b> ["display value/position", "change contrast/bias", "pan the image"]
 <li> <b>touchActions:</b> ["display value/position", "change contrast/bias", "pan the image"]
-<li> <b>mousetouchZoom:</b> false
+<li> <b>mousetouchZoom:</b> true
 </ul>
 where the array elements map to an increasing numbers of
 buttons/fingers.  You can change the default actions of the elements
 in either array in your js9Prefs.json file. For example, to make pan
-and zoom the default one-touch and pinch actions respectively:
+the default one-touch action and to stop the wheel/pinch from zooming:
 <ul>
 <li> <b>touchActions:</b> ["pan the image", "display value/position", "change contrast/bias"]
-<li> <b>mousetouchZoom:</b> true
+<li> <b>mousetouchZoom:</b> false
 </ul>
 As usual, the defaults in js9Prefs.json are used by all JS9 displays in
 a web page.

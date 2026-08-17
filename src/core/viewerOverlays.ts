@@ -2566,6 +2566,45 @@ JS9.eventToCharStr = function(evt){
     return c;
 };
 
+// unwrap an event: jQuery nested the browser event in evt.originalEvent, while
+// the native DOM adapter hands us the browser event directly. Handlers that
+// need browser-level properties (deltaY, touches, ...) go through this.
+JS9.eventNative = function(evt){
+    if( !evt ){ return null; }
+    return evt.originalEvent || evt;
+};
+
+// currently active touch points, or null if this is not a touch event
+JS9.eventTouches = function(evt){
+    const oevt = JS9.eventNative(evt);
+    if( oevt && oevt.touches && oevt.touches.length ){
+	return oevt.touches;
+    }
+    return null;
+};
+
+// touch points to take a position from: touchend only has changedTouches
+JS9.eventPosTouches = function(evt){
+    const oevt = JS9.eventNative(evt);
+    const touches = JS9.eventTouches(evt);
+    if( touches ){ return touches; }
+    if( oevt && oevt.changedTouches && oevt.changedTouches.length ){
+	return oevt.changedTouches;
+    }
+    return null;
+};
+
+// mouse button as a 1-based index (1: primary, 2: middle, 3: secondary),
+// or 0 if no button is involved (e.g. a touch or a plain move)
+JS9.eventMouseButton = function(evt){
+    const oevt = JS9.eventNative(evt);
+    if( !oevt ){ return 0; }
+    if( oevt.which ){ return oevt.which; }
+    // "which" is legacy and 0 when no button is pressed; "button" is 0-based
+    if( typeof oevt.button === "number" ){ return oevt.button + 1; }
+    return 0;
+};
+
 // get position of mouse in a canvas
 // http://stackoverflow.com/questions/1114465/getting-mouse-location-in-canvas
 JS9.eventToDisplayPos = function(evt, offset){
@@ -2588,21 +2627,10 @@ JS9.eventToDisplayPos = function(evt, offset){
     offset = offset || JS9.getNodeOffset(targ);
     // pageX, pageY: mouse positions relative to the document
     // changed touch events: take position from first finger
-    if( evt.originalEvent ){
-	if( evt.originalEvent.touches &&
-	    evt.originalEvent.touches.length ){
-	    touches = evt.originalEvent.touches;
-	    pageX = touches[0].pageX;
-	    pageY = touches[0].pageY;
-	} else if( evt.originalEvent.changedTouches &&
-		   evt.originalEvent.changedTouches.length ){
-	    touches = evt.originalEvent.changedTouches;
-	    pageX = touches[0].pageX;
-	    pageY = touches[0].pageY;
-	} else {
-	    pageX = evt.pageX;
-	    pageY = evt.pageY;
-	}
+    touches = JS9.eventPosTouches(evt);
+    if( touches ){
+	pageX = touches[0].pageX;
+	pageY = touches[0].pageY;
     } else {
 	// mouse events
 	pageX = evt.pageX;
