@@ -79,8 +79,18 @@ const DEFAULT_PLUGIN_SCRIPTS = [
 // URL helpers
 // ---------------------------------------------------------------------------
 
+// A loop rather than /^\/+|\/+$/g, whose `\/+$` backtracks quadratically on a
+// long run of slashes that does not end the string.
 function trimSlashes(s: string): string {
-    return s.replace(/^\/+|\/+$/g, "");
+    let start = 0;
+    let end = s.length;
+    while (start < end && s[start] === "/") {
+        start++;
+    }
+    while (end > start && s[end - 1] === "/") {
+        end--;
+    }
+    return s.slice(start, end);
 }
 
 function toBaseUrl(baseUrl: string): string {

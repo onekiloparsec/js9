@@ -157,8 +157,7 @@ function JS9InstallViewerUtils(JS9){
     			    "file does conform to FITS standard");
     
     	} else {
-    	    // eslint-disable-next-line no-useless-escape
-    	    regexp = new RegExp(`${name} *= *(-?[-+]?[0-9]*\.?[0-9]*([eE][-+]?[0-9]+)?) *`);
+    	    regexp = new RegExp(`${name} *= *(-?[-+]?[0-9]*\\.?[0-9]*([eE][-+]?[0-9]+)?) *`);
     	    if( card ){
     		s = card.replace(regexp, "$1");
     		oval = parseFloat(s);
