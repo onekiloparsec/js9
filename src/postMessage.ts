@@ -19,7 +19,9 @@ JS9PM.error = function(s){
 
 // initialize post message processing (for iframes)
 JS9PM.init = function (id, target){
-    const pm = {cb: []};
+    // a Map, so a reply's cmd can only reach a callback we stored, never a
+    // built-in such as "push" or "constructor"
+    const pm = {cb: new Map()};
     if( !id ){
         JS9PM.error("missing postMessage id for JS9");
     }
@@ -29,7 +31,15 @@ JS9PM.init = function (id, target){
     }
     pm.target = target || "*";
     window.addEventListener("message", (ev) => {
-	let msg;
+	let msg, cb;
+	// only replies from the JS9 iframe, and from its origin when one was
+	// given: any other window can post here too
+	if( ev.source !== pm.id ){
+	    return;
+	}
+	if( pm.target !== "*" && ev.origin !== new URL(pm.target).origin ){
+	    return;
+	}
 	const data = ev.data;
 	if( typeof data === "string" ){
 	    // json string passed (we hope)
@@ -41,9 +51,10 @@ JS9PM.init = function (id, target){
 	} else {
 	    JS9PM.error("invalid return msg from postMessage");
 	}
-	if( pm.cb[msg.cmd] && msg.res ){
-	    pm.cb[msg.cmd](msg.res);
-	    delete pm.cb[msg.cmd];
+	cb = msg && pm.cb.get(msg.cmd);
+	if( typeof cb === "function" && msg.res ){
+	    pm.cb.delete(msg.cmd);
+	    cb(msg.res);
 	}
     });
     return pm;
@@ -61,7 +72,7 @@ JS9PM.send = function(pm, cmd, args, cb){
     }
     obj = {cmd: cmd, args: args};
     if( cb ){
-	pm.cb[cmd] = cb;
+	pm.cb.set(cmd, cb);
     }
     pm.id.postMessage(obj, pm.target);
 };
