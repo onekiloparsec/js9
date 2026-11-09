@@ -181,7 +181,7 @@ export interface JS9Star {
     fwhm: number;
     /** Background-subtracted integrated flux. */
     flux: number;
-    /** Brightest pixel value. */
+    /** Brightest pixel value, in image units (background included). */
     peak: number;
     /** Gaussian sigma along each axis, in pixels. */
     sigmaX: number;
@@ -201,22 +201,30 @@ export interface JS9StarMetrics {
     hfr?: JS9StatSummary;
     fwhm?: JS9StatSummary;
     eccentricity?: JS9StatSummary;
-    /** Sigma-clipped background median. */
+    /** Median of the local (mesh) background map. */
     background?: number;
-    /** Sigma-clipped background standard deviation (image "noise"). */
+    /** Robust (MAD) standard deviation of the background-subtracted image. */
     noise?: number;
-    /** Detection threshold applied (typically background + N*noise). */
+    /**
+     * Representative detection level: background + sigmaThreshold * the
+     * median noise of the smoothed detection image. Since fixi-js 0.7.0
+     * ("fixi-photometry-v2") detection runs on a hot-pixel-filtered, smoothed
+     * image against a local noise map, so this is not background + N*noise.
+     */
     threshold?: number;
     stars?: JS9Star[];
 }
 
 export interface JS9StarMetricsOptions {
-    /** Detection threshold in units of background noise. Default 5. */
+    /** Detection threshold in units of local detection noise. Default 5. */
     sigmaThreshold?: number;
     /** Smallest and largest accepted blob, in pixels. Default 3 / 1024. */
     minSize?: number;
     maxSize?: number;
-    /** Largest accepted star radius, in pixels. Default 12. */
+    /**
+     * Measurement aperture radius, in pixels. Default 12. Stars whose HFR
+     * exceeds half of it are rejected as noise or nebulosity.
+     */
     maxRadius?: number;
     /** Cap on the length of `stars`. Default 500. */
     maxStarsReturned?: number;
