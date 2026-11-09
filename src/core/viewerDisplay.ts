@@ -211,14 +211,14 @@ JS9.Display = function(el){
 	this.iconjq = JS9.wrapCollection(this.icon);
 	this.iconimg = document.createElement("img");
 	this.iconimg.className = "JS9Logo";
-	this.iconimg.src = JS9.InstallDir(JS9.globalOpts.logo);
+	// src is set by showLogo() the first time the logo is shown: with
+	// logoDisplay off (the default) a hidden <img> with a src still
+	// costs a request per display, for an image nobody sees.
 	this.iconimg.alt = "js9";
 	this.iconimg.title = "js9";
 	this.icon.appendChild(this.iconimg);
 	this.iconimgjs = JS9.wrapCollection(this.iconimg);
-	if( JS9.globalOpts.logoDisplay ){
-	    this.icon.style.display = "block";
-	}
+	this.showLogo(JS9.globalOpts.logoDisplay);
     }
     // add resize capability, if necessary
     if( JS9.globalOpts.resizeHandle                    &&
@@ -338,6 +338,17 @@ JS9.Display = function(el){
 };
 
 // add support for file dialog box which executes JS9 routine on file blobs
+// show or hide the JS9 logo on this display, loading the image on first show
+JS9.Display.prototype.showLogo = function(show){
+    if( !this.icon || !this.iconimg ){
+	return;
+    }
+    if( show && !this.iconimg.getAttribute("src") ){
+	this.iconimg.src = JS9.InstallDir(JS9.globalOpts.logo);
+    }
+    this.icon.style.display = show ? "block" : "none";
+};
+
 JS9.Display.prototype.addFileDialog = function(funcName, template){
     let div, input, id;
     // sanity check

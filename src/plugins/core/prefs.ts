@@ -1091,9 +1091,8 @@ JS9.Prefs.processForm = function(source, arr, display, winid){
 	            obj[key] = val;
 		    // re-init toolbar
 		    JS9.SetToolbar("init");
-		    s = val ? "block" : "none";
 		    for(j=0; j<JS9.displays.length; j++){
-			JS9.displays[j].iconjq.css("display", s);
+			JS9.displays[j].showLogo(val);
 		    }
 		    break;
 		case "separate":

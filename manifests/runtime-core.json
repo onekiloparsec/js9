@@ -8,6 +8,7 @@
     { "src": "demo-vue/public/runtime/support.css", "dest": "runtime" },
     { "src": "demo-vue/public/runtime/viewer.css",  "dest": "runtime" },
     { "src": "demo-vue/public/font/*",              "dest": "runtime/font" },
+    { "src": "demo-vue/public/images/js9logo.png",  "dest": "runtime/images" },
 
     { "src": "node_modules/@onekiloparsec/fixi-js/dist/fixi.js",        "dest": "runtime" },
     { "src": "node_modules/@onekiloparsec/fixi-js/dist/fixi_core.wasm", "dest": "runtime" }

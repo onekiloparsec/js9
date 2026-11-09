@@ -1447,9 +1447,8 @@ JS9.Menubar.createMenus = function(){
 			case "logo":
 			    JS9.globalOpts.logoDisplay =
 				!JS9.globalOpts.logoDisplay;
-			    s = JS9.globalOpts.logoDisplay ? "block" : "none";
 			    for(ii=0; ii<JS9.displays.length; ii++){
-				JS9.displays[ii].iconjq.css("display", s);
+				JS9.displays[ii].showLogo(JS9.globalOpts.logoDisplay);
 			    }
 			    break;
 			case "toggleLayers":
