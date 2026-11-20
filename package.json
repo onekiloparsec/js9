@@ -1,6 +1,6 @@
 {
   "name": "@onekiloparsec/js9",
-  "version": "4.11.0",
+  "version": "4.12.0",
   "description": "astronomical image display everywhere",
   "main": "dist/library/js9.umd.js",
   "module": "dist/library/js9.es.js",
@@ -62,7 +62,7 @@
   },
   "homepage": "https://js9.si.edu",
   "dependencies": {
-    "@onekiloparsec/fixi-js": "^0.20.0"
+    "@onekiloparsec/fixi-js": "^0.21.0"
   },
   "devDependencies": {
     "@onekiloparsec/js9-plugin-simbad": "^0.1.0",
