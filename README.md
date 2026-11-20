@@ -133,7 +133,10 @@ one colour image:
   overrides it per load
 - the three planes are drawn as R, G and B; each channel gets its own
   zscale / zmax / dataminmax limits (an automatic colour balance), user
-  limits apply to all three; scale functions and contrast / bias apply,
+  limits apply to all three; with `colorbalance: "neutral"` (default image
+  option, `"none"` to turn it off) zscale / zmax limits are rebuilt around
+  each channel's sky level and noise, so the background comes out grey;
+  scale functions and contrast / bias apply,
   colormaps do not (a colour image stays on `grey`)
 - the pixel readout (`valpos`) gives R, G and B; `im.raw.color` is
   `"rgb"`, `im.raw.cfa` describes the colour filter array (also for

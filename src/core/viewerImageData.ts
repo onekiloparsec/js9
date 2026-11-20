@@ -875,8 +875,11 @@ JS9.Image.prototype.zscale = function(setvals){
 // Per-channel scale limits of a colour image (raw.color === "rgb"):
 // [[rmin, rmax], [gmin, gmax], [bmin, bmax]]. Clipping modes are computed on
 // each plane (zscale per channel acts as an automatic colour balance for raw
-// frames); user limits apply to all three. Cached until the data, the mode or
-// the zscale parameters change.
+// frames); user limits apply to all three. With colorbalance "neutral" (the
+// default), zscale / zmax limits are then rebuilt around each channel's sky:
+// every channel gets a width proportional to its sky noise and puts its sky
+// level at the same point of that width, so the background comes out grey.
+// Cached until the data, the mode or these parameters change.
 JS9.Image.prototype.colorLimits = function(){
     let c, plane, lo, hi, v, i, res, z;
     const raw = this.raw;
@@ -887,7 +890,7 @@ JS9.Image.prototype.colorLimits = function(){
 	return [linked, linked, linked];
     }
     const key = [mode, this.params.zscalecontrast, this.params.zscalesamples,
-		 this.params.zscaleline].join(",");
+		 this.params.zscaleline, this.params.colorbalance].join(",");
     if( this.colorClip && this.colorClip.data === raw.data &&
 	this.colorClip.key === key ){
 	return this.colorClip.limits;
@@ -936,7 +939,55 @@ JS9.Image.prototype.colorLimits = function(){
 	    break;
 	}
     }
+    if( (mode === "zscale" || mode === "zmax") &&
+	this.params.colorbalance !== "none" ){
+	this.neutralSky(limits, mode);
+    }
     this.colorClip = {data: raw.data, key: key, limits: limits};
+    return limits;
+};
+
+// Sky median and MAD of each plane (from a sample of about 2^18 pixels),
+// then: width_c = k * MAD_c with k the mean of zscale-width / MAD, and the
+// sky at the mean fraction f of the zscale ranges, low_c = sky_c - f * width_c.
+// zmax keeps each channel's maximum as its upper limit. Left alone when a
+// channel has no usable noise estimate (flat or synthetic data).
+JS9.Image.prototype.neutralSky = function(limits, mode){
+    let c, i, v, plane, sample, med, mad, width, f, k;
+    const raw = this.raw;
+    const n = raw.width * raw.height;
+    const step = Math.max(1, Math.floor(n / 262144));
+    const median = (arr) => {
+	arr.sort();
+	return arr.length ? arr[arr.length >> 1] : NaN;
+    };
+    const sky = [];
+    for(c=0; c<3; c++){
+	plane = raw.data.subarray(c * n, (c + 1) * n);
+	sample = new Float64Array(Math.ceil(n / step));
+	let m = 0;
+	for(i=0; i<n; i+=step){
+	    v = plane[i];
+	    if( Number.isFinite(v) ){ sample[m++] = v; }
+	}
+	sample = sample.subarray(0, m);
+	med = median(sample);
+	for(i=0; i<m; i++){ sample[i] = Math.abs(sample[i] - med); }
+	mad = median(sample);
+	width = limits[c][1] - limits[c][0];
+	if( !Number.isFinite(med) || !(mad > 0) || !(width > 0) ){
+	    return limits;
+	}
+	sky.push({med: med, mad: mad, width: width, frac: (med - limits[c][0]) / width});
+    }
+    f = sky.reduce((a, s) => a + s.frac, 0) / 3;
+    k = sky.reduce((a, s) => a + s.width / s.mad, 0) / 3;
+    for(c=0; c<3; c++){
+	width = k * sky[c].mad;
+	// new pairs: a fallback may share one array between channels
+	limits[c] = [sky[c].med - f * width,
+		     mode === "zmax" ? limits[c][1] : sky[c].med - f * width + width];
+    }
     return limits;
 };
 

@@ -363,6 +363,7 @@ JS9.imageOpts = {
     zscalecontrast: 0.25,		// default from ds9
     zscalesamples: 600,			// default from ds9
     zscaleline: 120,			// default from ds9
+    colorbalance: "neutral",		// colour images: "neutral" (grey sky) or "none"
     wcssys: "native",			// default WCS sys
     lcs: "physical",			// default logical coordinate system
     valpos: true,			// whether to display value/position
