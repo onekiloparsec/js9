@@ -479,6 +479,24 @@ JS9.Image.prototype.mkRawDataFromHDU = function(obj, opts){
 	JS9.error(`unsupported bitpix: ${this.raw.bitpix}`);
 	break;
     }
+    // colour image (a debayered raw frame from fixi): raw.data holds the R,
+    // G and B planes in turn, raw.width x raw.height each. The planes are
+    // drawn as one colour image, so the colormap is grey (the scale function
+    // and contrast/bias still apply, per channel).
+    if( hdu.color === "rgb" && hdu.axis && hdu.axis[3] === 3 &&
+	this.raw.data && this.raw.data.length >= 3 * this.raw.width * this.raw.height ){
+	this.raw.color = "rgb";
+	this.params.colormap = "grey";
+	if( this.cmapObj && this.cmapObj.name !== "grey" ){
+	    delete this.staticObj;
+	    this.cmapObj = JS9.lookupColormap("grey");
+	}
+    } else {
+	delete this.raw.color;
+    }
+    delete this.colorClip;
+    // colour filter array of a raw colour frame, debayered or not
+    this.raw.cfa = hdu.cfa;
     // array of cards
     this.raw.card = hdu.card;
     // cfitsio returns these:

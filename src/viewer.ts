@@ -168,6 +168,7 @@ JS9.globalOpts = {
     fixiWasmURL: "node_modules/@onekiloparsec/fixi-js/dist/fixi_core.wasm", // Rust/WASM FITS core
     fitsAdapter: "fixi",        // FITS backend id to activate (e.g. fixi or registered custom adapter)
     fitsCompliance: "strict",   // fixi compliance mode: strict|compat
+    debayer: "bilinear",        // raw colour (Bayer) frames: bilinear|superpixel|none
     shapeEngine: "native",      // active shape engine id
     table: {xdim: 4096, ydim: 4096, bin: 1, bitpix: 32},// image section size to extract from table
     image: {xdim: 4096, ydim: 4096, bin: 1},// image section size (unlimited=0)

@@ -123,6 +123,23 @@ Default behavior with `Fixi` enabled:
 - `JS9.globalOpts.fitsCompliance = "strict"` (enforce core FITS HDU constraints)
 - set `fitsCompliance` to `"compat"` for legacy-permissive behavior
 
+Raw colour frames (one-shot-colour cameras: a 2D image with `BAYERPAT`, or
+an XISF `ColorFilterArray`) are debayered by fixi-js (0.19+) and shown as
+one colour image:
+
+- `JS9.globalOpts.debayer = "bilinear"` (default, full resolution),
+  `"superpixel"` (one RGB pixel per 2 x 2 cell, half resolution) or
+  `"none"` (the raw mosaic, in grey); `JS9.Load(file, {debayer: ...})`
+  overrides it per load
+- the three planes are drawn as R, G and B; each channel gets its own
+  zscale / zmax / dataminmax limits (an automatic colour balance), user
+  limits apply to all three; scale functions and contrast / bias apply,
+  colormaps do not (a colour image stays on `grey`)
+- the pixel readout (`valpos`) gives R, G and B; `im.raw.color` is
+  `"rgb"`, `im.raw.cfa` describes the colour filter array (also for
+  frames loaded with `debayer: "none"`); the header carries `FIXI_CFA`
+  and `FIXI_DEBAYER`, the cards stay those of the file
+
 Review notes for compliance-related behavior changes:
 
 - `docs/fixi-fits-compliance.md`

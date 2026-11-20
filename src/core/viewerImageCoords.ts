@@ -1585,6 +1585,7 @@ JS9.Image.prototype.saveJPEG = function(fname, opts){
 // update (and display) pixel and wcs values (connected to info plugin)
 JS9.Image.prototype.updateValpos = function(ipos, disp){
     let val, vstr, vstr1, vstr2, vstr3, val3, i, c, d, p, s;
+    let rgbval = null;
     let cd1, cd2, v1, v2, units, sect;
     let obj = null;
     const sep1 = "\t ";
@@ -1643,6 +1644,11 @@ JS9.Image.prototype.updateValpos = function(ipos, disp){
 	// so subtract the 0.5 of the image pixel
 	val = this.raw.data[Math.floor(ipos.y - 0.5) * this.raw.width +
 			    Math.floor(ipos.x - 0.5)];
+	// colour image: R, G and B values (val is R)
+	if( this.raw.color === "rgb" ){
+	    rgbval = [0, 1, 2].map((c) => this.raw.data[c * this.raw.width * this.raw.height +
+				       Math.floor(ipos.y - 0.5) * this.raw.width + Math.floor(ipos.x - 0.5)]);
+	}
 	// fix the significant digits in the value
 	switch(this.raw.bitpix){
 	case 8:
@@ -1658,6 +1664,9 @@ JS9.Image.prototype.updateValpos = function(ipos, disp){
 	default:
 	    val3 = ti(val);
 	    break;
+	}
+	if( rgbval ){
+	    val3 = rgbval.map((v) => this.raw.bitpix < 0 ? tf(v) : ti(v)).join(" ");
 	}
 	// create the valpos string
 	vstr1 = val3;
@@ -1678,7 +1687,7 @@ JS9.Image.prototype.updateValpos = function(ipos, disp){
 	       ra: "", dec: "", wcspos: "", wcssys: "",
 	       racen: "", deccen: "",
 	       wcsfov: "", wcspix: "",
-	       val: val, val3: val3,
+	       val: val, val3: val3, rgb: rgbval,
 	       id: this.id, file: this.file, object: this.object||""};
 	if( this.telescope || this.instrument ){
 	    if( obj.object ){ obj.object += "  "; }

@@ -30,6 +30,10 @@ JS9.Image.prototype.setColormap = function(...args){
     let [arg, arg2, arg3] = args;
     let arr;
     const setCmap = (arg) => {
+	// colour images are drawn from their own R, G, B planes
+	if( this.raw && this.raw.color === "rgb" ){
+	    arg = "grey";
+	}
 	if( this.cmapObj ){
 	    // unset rgb mode, if necessary
 	    switch(this.cmapObj.name){
@@ -866,6 +870,74 @@ JS9.Image.prototype.zscale = function(setvals){
 	JS9.floatPrecision(this.params.scalemin, this.params.scalemax);
     // allow chaining
     return this;
+};
+
+// Per-channel scale limits of a colour image (raw.color === "rgb"):
+// [[rmin, rmax], [gmin, gmax], [bmin, bmax]]. Clipping modes are computed on
+// each plane (zscale per channel acts as an automatic colour balance for raw
+// frames); user limits apply to all three. Cached until the data, the mode or
+// the zscale parameters change.
+JS9.Image.prototype.colorLimits = function(){
+    let c, plane, lo, hi, v, i, res, z;
+    const raw = this.raw;
+    const n = raw.width * raw.height;
+    const mode = this.params.scaleclipping;
+    const linked = [this.params.scalemin, this.params.scalemax];
+    if( raw.color !== "rgb" || mode === "user" ){
+	return [linked, linked, linked];
+    }
+    const key = [mode, this.params.zscalecontrast, this.params.zscalesamples,
+		 this.params.zscaleline].join(",");
+    if( this.colorClip && this.colorClip.data === raw.data &&
+	this.colorClip.key === key ){
+	return this.colorClip.limits;
+    }
+    const minmax = (p) => {
+	lo = Infinity; hi = -Infinity;
+	for(i=0; i<p.length; i++){
+	    v = p[i];
+	    if( v < lo ){ lo = v; }
+	    if( v > hi ){ hi = v; }
+	}
+	return lo <= hi ? [lo, hi] : linked;
+    };
+    const zscale = (p) => {
+	if( !JS9.fits || typeof JS9.fits.computeZscale !== "function" ){
+	    return null;
+	}
+	try{
+	    res = JS9.fits.computeZscale(p, raw.width, raw.height, raw.bitpix,
+					 {contrast: this.params.zscalecontrast,
+					  numsamples: this.params.zscalesamples,
+					  perline: this.params.zscaleline});
+	    z = JS9.isArray(res) ? res : [res && res.z1, res && res.z2];
+	    z = [parseFloat(z[0]), parseFloat(z[1])];
+	    return Number.isFinite(z[0]) && Number.isFinite(z[1]) ? z : null;
+	}
+	catch(e){
+	    JS9.log("colour zscale failed, using linked limits", e);
+	    return null;
+	}
+    };
+    const limits = [];
+    for(c=0; c<3; c++){
+	plane = raw.data.subarray(c * n, (c + 1) * n);
+	switch(mode){
+	case "zscale":
+	    limits.push(zscale(plane) || linked);
+	    break;
+	case "zmax":
+	    z = zscale(plane);
+	    limits.push(z ? [z[0], minmax(plane)[1]] : linked);
+	    break;
+	default:
+	    // dataminmax, and anything else that is not user limits
+	    limits.push(minmax(plane));
+	    break;
+	}
+    }
+    this.colorClip = {data: raw.data, key: key, limits: limits};
+    return limits;
 };
 
 // ---------------------------------------------------------------------------

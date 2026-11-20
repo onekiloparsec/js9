@@ -20,6 +20,10 @@ JS9.Image.prototype.mkColorData = function(){
     if( this.cmapObj.type === "static" ){
 	return this;
     }
+    // colour image: one lookup index per plane, each with its own limits
+    if( this.raw.color === "rgb" ){
+	return this.mkColorDataRGB();
+    }
     // allocate array
     if( !this.colorData || this.colorData.length < dlen ){
 	this.colorData = new Int32Array(dlen);
@@ -43,6 +47,38 @@ JS9.Image.prototype.mkColorData = function(){
 	}
     }
     // allow chaining
+    return this;
+};
+
+// colour image (raw.color === "rgb"): colorData holds the R, G and B lookup
+// indexes in turn, each plane scaled with its own limits (see colorLimits)
+JS9.Image.prototype.mkColorDataRGB = function(){
+    let c, i, dd, lo, hi, dval, base;
+    const ss = JS9.SCALESIZE;
+    const length = ss - 1;
+    const dlen = this.raw.width * this.raw.height;
+    const limits = this.colorLimits();
+    const idata = this.raw.data;
+    if( !this.colorData || this.colorData.length < 3 * dlen ){
+	this.colorData = new Int32Array(3 * dlen);
+    }
+    const odata = this.colorData;
+    for(c=0; c<3; c++){
+	lo = limits[c][0];
+	hi = limits[c][1];
+	dval = length / (hi - lo);
+	base = c * dlen;
+	for(i=0; i<dlen; i++){
+	    dd = idata[base + i];
+	    if( dd <= lo ){
+		odata[base + i] = 0;
+	    } else if( dd >= hi ){
+		odata[base + i] = length;
+	    } else {
+		odata[base + i] = Math.floor(((dd - lo) * dval) + 0.5);
+	    }
+	}
+    }
     return this;
 };
 
@@ -342,6 +378,8 @@ JS9.Image.prototype.mkRGBImage = function(){
     let gthis = null;
     let bthis = null;
     let dorgb = false;
+    let docolor = false;
+    let plen = 0;
     let mimmask = false;
     let mimopacity = false;
     let mimoverlay = false;
@@ -363,6 +401,11 @@ JS9.Image.prototype.mkRGBImage = function(){
 	if( this.display.rgb.bim ){
 	    bthis = this.display.rgb.bim;
 	}
+    }
+    // colour image: the R, G and B planes of one image
+    if( !dorgb && this.raw.color === "rgb" && !this.staticObj ){
+	docolor = true;
+	plen = this.raw.width * this.raw.height;
     }
     ctx = this.display.context;
     rgb = this.rgb;
@@ -477,7 +520,7 @@ JS9.Image.prototype.mkRGBImage = function(){
 		this.mask.opacity = 1;
 	    }
 	}
-    } else if( JS9.notNull(this.params.flooropacity) && !dorgb && !domask ){
+    } else if( JS9.notNull(this.params.flooropacity) && !dorgb && !docolor && !domask ){
 	// flooropacity: image pixels <= floor value use floor opacity
 	// can't do this with rgb mode because we have 3 different data values
 	alphafloor = this.params.flooropacity * 255;
@@ -515,6 +558,11 @@ JS9.Image.prototype.mkRGBImage = function(){
 		    this.mkRGBImage();
 		    return this;
 		}
+	    } else if( docolor ){
+		// colour image: one index per plane
+		ridx = this.colorData[yLen + xIn];
+		gidx = this.colorData[plen + yLen + xIn];
+		bidx = this.colorData[2 * plen + yLen + xIn];
 	    } else if( !this.staticObj ){
 		// ordinary case: one index
 		idx = this.colorData[yLen + xIn];
@@ -555,6 +603,11 @@ JS9.Image.prototype.mkRGBImage = function(){
 				img.data[odx+2] = 0;
 			    }
 			    img.data[odx+3] = alpha;
+			} else if( docolor ){
+			    img.data[odx]   = this.psColors[ridx][0];
+			    img.data[odx+1] = this.psColors[gidx][1];
+			    img.data[odx+2] = this.psColors[bidx][2];
+			    img.data[odx+3] = curalpha;
 			} else {
 			    if( this.staticObj ){
 				// special case: static colormap
