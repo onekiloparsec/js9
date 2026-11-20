@@ -138,6 +138,10 @@ one colour image:
   each channel's sky level and noise, so the background comes out grey;
   scale functions and contrast / bias apply,
   colormaps do not (a colour image stays on `grey`)
+- RGB XISF images (fixi-js 0.20+) are shown the same way, as one colour
+  image rather than one image per channel: `JS9.globalOpts.combineRgb =
+  true` (default), `false` (or `JS9.Load(file, {combineRgb: false})`) for
+  the separate channels
 - the pixel readout (`valpos`) gives R, G and B; `im.raw.color` is
   `"rgb"`, `im.raw.cfa` describes the colour filter array (also for
   frames loaded with `debayer: "none"`); the header carries `FIXI_CFA`

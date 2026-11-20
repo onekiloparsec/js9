@@ -169,6 +169,7 @@ JS9.globalOpts = {
     fitsAdapter: "fixi",        // FITS backend id to activate (e.g. fixi or registered custom adapter)
     fitsCompliance: "strict",   // fixi compliance mode: strict|compat
     debayer: "bilinear",        // raw colour (Bayer) frames: bilinear|superpixel|none
+    combineRgb: true,           // RGB XISF images: one colour image (true) or one image per channel
     shapeEngine: "native",      // active shape engine id
     table: {xdim: 4096, ydim: 4096, bin: 1, bitpix: 32},// image section size to extract from table
     image: {xdim: 4096, ydim: 4096, bin: 1},// image section size (unlimited=0)
